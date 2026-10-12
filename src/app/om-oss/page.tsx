@@ -43,7 +43,21 @@ export default function AboutPage() {
             )}
           </div>
           <div className="reveal">
-            {aboutImage ? (
+            {site.about.founders.length > 0 ? (
+              <figure>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  {site.about.founders.map((f) => (
+                    <div key={f.src}>
+                      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-ink-850">
+                        <Image src={f.src} alt={f.alt} fill sizes="(min-width: 1024px) 20vw, 50vw" className="object-cover" />
+                      </div>
+                      {f.name && <p className="mt-2 text-sm font-semibold text-white">{f.name}</p>}
+                    </div>
+                  ))}
+                </div>
+                <figcaption className="mt-4 text-sm text-mist-400">Vi som driver {site.name} och gör jobbet själva.</figcaption>
+              </figure>
+            ) : aboutImage ? (
               <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-ink-850">
                 <Image
                   src={aboutImage.src}

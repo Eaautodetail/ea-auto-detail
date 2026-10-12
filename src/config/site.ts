@@ -275,6 +275,14 @@ export const site = {
    * den med egna ord. Arbetstider och upplägg läggs till automatiskt efteråt.
    */
   about: {
+    /**
+     * Foton på oss som driver företaget (i /public/about/). Lägg till `name`
+     * om ni vill visa era förnamn under bilderna.
+     */
+    founders: [
+      { src: "/about/grundare-1.jpg", alt: "En av grundarna till EA Auto Detail, i randig fotbollströja.", name: null },
+      { src: "/about/grundare-2.jpg", alt: "Den andra grundaren till EA Auto Detail, i blå fotbollströja.", name: null },
+    ] as { src: string; alt: string; name: string | null }[],
     story: [
       `${NAME} drivs av oss två – unga entreprenörer som går på Söderportgymnasiet och som delar samma intresse: bilar, och känslan när en bil verkligen är ren. Ur det intresset växte idén att starta något eget. Vi bygger företaget från grunden, vid sidan av studierna, och gör allt arbete själva.`,
       "Hos oss pratar du direkt med dem som tar hand om din bil. Vi är inget stort, opersonligt företag – bara vi två och ett jobb som vi vill att du ska bli nöjd med. Vi är noggranna med detaljerna och anpassar arbetet efter bilens skick och vad du behöver. Skillnaden mellan före och efter ska märkas på riktigt.",
