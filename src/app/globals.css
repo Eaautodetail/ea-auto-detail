@@ -1,26 +1,123 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-archivo), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink-950: #08090a;
+  --color-ink-900: #0e0f11;
+  --color-ink-850: #131416;
+  --color-ink-800: #18191c;
+  --color-ink-700: #232428;
+  --color-ink-600: #34353a;
+  --color-ink-500: #4a4b51;
+  --color-mist-400: #8d8f96;
+  --color-mist-300: #b0b2b8;
+  --color-mist-200: #d4d5d9;
+  --color-mist-100: #ececee;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ink-950);
+  color: var(--color-mist-100);
+  font-feature-settings: "cv11", "ss01";
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #ffffff;
+  color: #000000;
+}
+
+/* Tydlig fokusmarkering för tangentbordsanvändare. */
+:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Rubriker i bred, tung display-stil. */
+.font-display {
+  font-family: var(--font-display);
+  font-stretch: 112%;
+  font-variation-settings: "wdth" 112;
+}
+
+/* Diskret korn/brus för en mer exklusiv, mindre "platt" yta. */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Mjuka in-animationer vid scroll – bara i webbläsare som stödjer
+   scroll-drivna animationer, och aldrig om användaren valt reducerad rörelse. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+
+  .hero-in {
+    animation: hero-in 0.9s var(--ease-out-soft) both;
+  }
+  .hero-in-delay-1 { animation-delay: 0.08s; }
+  .hero-in-delay-2 { animation-delay: 0.16s; }
+  .hero-in-delay-3 { animation-delay: 0.24s; }
+
+  .sheen {
+    animation: sheen 9s ease-in-out infinite;
+  }
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sheen {
+  0%, 100% { transform: translateX(-6%); opacity: 0.55; }
+  50% { transform: translateX(6%); opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

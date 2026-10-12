@@ -1,69 +1,113 @@
-import Image from "next/image";
+import Link from "next/link";
+import { site } from "@/config/site";
+import { Hero } from "@/components/hero";
+import { PricingTerms, ServiceCards } from "@/components/services";
+import { Gallery } from "@/components/gallery";
+import { FaqList, HowItWorks, WhyUs } from "@/components/blocks";
+import { SocialLinks } from "@/components/social-links";
+import { ContactDetails } from "@/components/contact-details";
+import { BookingForm } from "@/components/booking-form";
+import { ArrowIcon, Section, SectionHeading } from "@/components/ui";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <>
+      <Hero />
+
+      <Section id="tjanster" labelledBy="tjanster-rubrik">
+        <SectionHeading
+          id="tjanster-rubrik"
+          eyebrow="Tjänster & priser"
+          title="Tre tjänster. Tydliga priser."
+          intro="Välj det din bil behöver. Alla priser är i svenska kronor och du får alltid veta kostnaden innan vi börjar."
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <div className="mt-12">
+          <ServiceCards />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="mt-5">
+          <PricingTerms />
         </div>
-      </main>
-    </div>
+      </Section>
+
+      <Section id="galleri" labelledBy="galleri-rubrik" className="border-t border-white/10 bg-ink-900">
+        <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+          <SectionHeading
+            id="galleri-rubrik"
+            eyebrow="Före & efter"
+            title="Resultatet säger det mesta."
+            intro="Dra i reglaget för att jämföra före och efter."
+          />
+          <Link href="/galleri" className="group inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-white">
+            Hela galleriet <ArrowIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+        <div className="mt-12">
+          <Gallery limit={2} showFilters={false} />
+        </div>
+      </Section>
+
+      <Section id="varfor" labelledBy="varfor-rubrik">
+        <SectionHeading
+          id="varfor-rubrik"
+          eyebrow="Varför EA Auto Detail"
+          title="Små nog att bry oss. Noggranna nog att märkas."
+        />
+        <div className="mt-12">
+          <WhyUs />
+        </div>
+      </Section>
+
+      <Section id="sa-funkar-det" labelledBy="steg-rubrik" className="border-t border-white/10 bg-ink-900">
+        <SectionHeading id="steg-rubrik" eyebrow="Så bokar du" title="Enkelt från förfrågan till ren bil." />
+        <div className="mt-12">
+          <HowItWorks />
+        </div>
+      </Section>
+
+      <Section id="foljoss" labelledBy="social-rubrik">
+        <div className="reveal grid gap-8 rounded-3xl border border-white/10 bg-ink-900 p-8 sm:p-12 md:grid-cols-[1.3fr_1fr] md:items-center">
+          <div>
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.25em] text-mist-400">Följ oss</p>
+            <h2 id="social-rubrik" className="font-display text-3xl font-bold leading-tight text-white sm:text-4xl">
+              Se fler resultat på TikTok, Instagram och Facebook.
+            </h2>
+            <p className="mt-4 text-mist-300">Vi visar våra senaste jobb och före/efter-klipp i sociala medier.</p>
+          </div>
+          <SocialLinks />
+        </div>
+      </Section>
+
+      <Section id="faq" labelledBy="faq-rubrik" className="border-t border-white/10">
+        <div className="grid gap-12 lg:grid-cols-[1fr_1.6fr]">
+          <div>
+            <SectionHeading id="faq-rubrik" eyebrow="Vanliga frågor" title="Bra att veta." />
+            <Link href="/vanliga-fragor" className="group mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white">
+              Alla frågor <ArrowIcon className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+          <FaqList limit={5} />
+        </div>
+      </Section>
+
+      <Section id="boka" labelledBy="boka-rubrik" className="border-t border-white/10 bg-ink-900">
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-end">
+          <SectionHeading
+            id="boka-rubrik"
+            eyebrow="Kontakt & bokning"
+            title="Skicka en förfrågan."
+            intro="Fyll i formuläret så hör vi av oss och bekräftar tid och pris."
+          />
+          <ContactDetails />
+        </div>
+        <div className="mt-14">
+          <BookingForm headingLevel="h3" />
+        </div>
+      </Section>
+    </>
   );
 }
+
+export const metadata = {
+  title: { absolute: `${site.name} – Bilvård, biltvätt & mobil bilvård` },
+  alternates: { canonical: "/" },
+};
