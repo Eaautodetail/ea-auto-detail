@@ -3,8 +3,10 @@
 Fill these in `src/config/site.ts` unless noted. Everything marked **FYLL I** on the site comes from this list.
 
 ## Required
-- [ ] **How booking requests should reach you**: an e-mail address (for Resend) or a webhook/automation – see README.
-- [ ] **Phone number** and/or **e-mail address** to show on the site (`contact.phone`, `contact.phoneHref`, `contact.email`).
+- [x] Booking e-mail: eaautodetail2026@gmail.com
+- [ ] **Resend API key** (free account created with that Gmail) so requests are actually e-mailed – see README.
+- [x] E-mail shown on the site: eaautodetail2026@gmail.com
+- [ ] **Phone number** to show on the site, if you want one (`contact.phone`, `contact.phoneHref`).
 - [ ] **Service area** – which towns/municipalities you cover (`contact.serviceArea`, and the FAQ "Vilka områden åker ni till?").
 - [ ] **Social media URLs** for TikTok, Instagram and Facebook (`social`).
 - [ ] **What each service includes** – confirm or edit the draft lists, then set `includesConfirmed: true`.

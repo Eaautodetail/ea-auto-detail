@@ -86,7 +86,7 @@ export const site = {
     phone: null as string | null,
     /** Samma nummer i internationellt format för länkar, t.ex. "+46701234567". */
     phoneHref: null as string | null,
-    email: null as string | null,
+    email: "eaautodetail2026@gmail.com" as string | null,
     /** Område vi utgår från / åker till, t.ex. "Västerås med omnejd". */
     serviceArea: null as string | null,
     /** Svarstider eller tider vi tar emot bokningar, t.ex. "Vardagar 16–20". */

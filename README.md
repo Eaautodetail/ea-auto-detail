@@ -79,8 +79,11 @@ You can configure both. **If neither is configured, the API answers 503 and the 
 request could not be sent** (and shows the contact details). No fake confirmations are ever shown. On success the
 visitor sees a reference number and an explicit "this is not a confirmed booking yet" message.
 
-Simplest setup for Resend: create a free account, verify your domain, create an API key, then set
-`BOOKING_EMAIL_FROM="EA Auto Detail <bokning@yourdomain.se>"` and `BOOKING_EMAIL_TO=your@inbox.se`.
+Simplest setup for Resend (no own domain needed yet): sign up at resend.com **with eaautodetail2026@gmail.com**, create
+an API key, then set `RESEND_API_KEY=<key>`, `BOOKING_EMAIL_TO=eaautodetail2026@gmail.com` and
+`BOOKING_EMAIL_FROM="EA Auto Detail <onboarding@resend.dev>"`. Resend's test sender may only deliver to the account's own
+address, which is exactly what we need. Once you have a domain, verify it in Resend and switch the sender to e.g.
+`bokning@yourdomain.se`.
 
 Privacy: the server never stores or logs customer data; only technical delivery errors are logged. A honeypot field and a
 simple per-IP rate limit (8 requests / 10 min) reduce spam.
