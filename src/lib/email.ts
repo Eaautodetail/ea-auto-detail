@@ -70,8 +70,12 @@ export function emailConfig(env: Env = process.env): EmailConfig {
   const configuredFrom = env.BOOKING_EMAIL_FROM?.trim() || null;
   const configuredTo = list(env.BOOKING_EMAIL_TO);
 
-  const smtpUser = env.SMTP_USER?.trim();
-  const smtpPassRaw = env.SMTP_PASS;
+  // GMAIL_APP_PASSWORD (+ valfritt GMAIL_USER) är ett enklare alias för Gmail;
+  // utan användarnamn används sajtens kontaktadress (site.contact.email).
+  const gmailPass = env.GMAIL_APP_PASSWORD?.trim() ? env.GMAIL_APP_PASSWORD : undefined;
+  const smtpUser =
+    env.SMTP_USER?.trim() || env.GMAIL_USER?.trim() || (gmailPass ? site.contact.email ?? undefined : undefined);
+  const smtpPassRaw = env.SMTP_PASS?.trim() ? env.SMTP_PASS : gmailPass;
   if (smtpUser && smtpPassRaw?.trim()) {
     const host = env.SMTP_HOST?.trim() || "smtp.gmail.com";
     const port = Number.parseInt(env.SMTP_PORT ?? "", 10) || 465;

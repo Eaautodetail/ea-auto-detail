@@ -33,6 +33,7 @@ const MAX_TOKEN_LENGTH = 4096;
 const KEY_SOURCES = [
   { env: "BOOKING_SECRET", info: "ea-auto-detail/booking-token/v1/booking-secret" },
   { env: "SMTP_PASS", info: "ea-auto-detail/booking-token/v1/derived-from-smtp-pass" },
+  { env: "GMAIL_APP_PASSWORD", info: "ea-auto-detail/booking-token/v1/derived-from-gmail-app-password" },
   { env: "RESEND_API_KEY", info: "ea-auto-detail/booking-token/v1/derived-from-resend-api-key" },
 ] as const;
 
