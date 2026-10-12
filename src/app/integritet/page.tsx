@@ -121,11 +121,23 @@ export default function PrivacyPage() {
               (personuppgiftsbiträden):
             </p>
             <ul>
-              <li>
-                E-post: mejlen skickas via {processor ?? "en e-posttjänst"}
-                {inboxAtGoogle && processor !== "Google (Gmail)" && " och tas emot i vår inkorg hos Google (Gmail)"}
-                {inboxAtGoogle && processor === "Google (Gmail)" && ", där vi också tar emot och svarar på mejl"}.
-              </li>
+              {processor || !webhookConfigured ? (
+                <li>
+                  E-post: mejlen skickas via {processor ?? "en e-posttjänst"}
+                  {inboxAtGoogle && processor !== "Google (Gmail)" && " och tas emot i vår inkorg hos Google (Gmail)"}
+                  {inboxAtGoogle && processor === "Google (Gmail)" && ", där vi också tar emot och svarar på mejl"}.
+                </li>
+              ) : (
+                <li>
+                  Bokningsverktyg: förfrågan förs över till det verktyg vi använder för att hålla ordning på bokningarna.
+                  {show && (
+                    <>
+                      {" "}
+                      <Placeholder>Ange vilket verktyg förfrågningarna förs över till.</Placeholder>
+                    </>
+                  )}
+                </li>
+              )}
               <li>
                 Webbhotell: den tjänst som driver webbplatsen tar emot förfrågan och skickar den vidare.
                 {show && (
@@ -136,7 +148,7 @@ export default function PrivacyPage() {
                 )}
               </li>
             </ul>
-            {show && !processor && (
+            {show && !processor && !webhookConfigured && (
               <Placeholder>E-post är inte konfigurerad ännu – ange e-postleverantör (Gmail eller Resend).</Placeholder>
             )}
           </section>

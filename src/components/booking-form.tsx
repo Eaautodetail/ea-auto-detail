@@ -770,11 +770,11 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
         <div className="lg:hidden">
           <PriceSummary price={price} title="Sammanfattning innan du skickar" />
         </div>
-        <div className="hidden lg:block">
-          <PriceLine price={price} />
-        </div>
 
         <div className="flex flex-col gap-3">
+          <div className="mb-2 hidden lg:block">
+            <PriceLine price={price} />
+          </div>
           <button
             type="submit"
             disabled={status.state === "submitting" || processingPhotos}

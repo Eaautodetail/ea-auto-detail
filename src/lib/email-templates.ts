@@ -9,7 +9,7 @@
  * från kunden eller ägaren escapas i HTML-versionen. Företagsuppgifter
  * (priser, betalning, kontakt, krav på plats) hämtas från src/config/site.ts.
  */
-import { onSiteNeeds, site, socialLinks } from "@/config/site";
+import { onSiteNeeds, paymentMethodsText, site, socialLinks } from "@/config/site";
 import { bookingAsText, priceSummary, type BookingFields } from "@/lib/booking";
 import type { BookingTokenData } from "@/lib/booking-token";
 import { formatDate, formatSEK } from "@/lib/format";
@@ -206,10 +206,7 @@ function onSiteBlocks(serviceId: string, arrangementId: string): Block[] {
 
 function paymentBlock(): Block {
   // "Swish eller kontanter" – samma formulering som på webbplatsen.
-  const [first = "", ...rest] = site.payment.methods;
-  const others = rest.map((m) => m.charAt(0).toLowerCase() + m.slice(1));
-  const methods = others.length ? `${[first, ...others.slice(0, -1)].join(", ")} eller ${others[others.length - 1]}` : first;
-  return { kind: "list", title: "Betalning", items: [`Betalsätt: ${methods}`, site.payment.when] };
+  return { kind: "list", title: "Betalning", items: [`Betalsätt: ${paymentMethodsText()}`, site.payment.when] };
 }
 
 const customerFooter = (reason: string) =>

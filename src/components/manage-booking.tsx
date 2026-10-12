@@ -180,7 +180,7 @@ function BookingDetails({ booking, expiresAt }: { booking: ManagedBooking; expir
               href={`sms:${booking.phone.replace(/[^\d+]/g, "")}`}
               className="text-xs font-semibold text-mist-300 underline underline-offset-2 hover:text-white"
             >
-              Skicka SMS<span className="sr-only"> till {booking.phone}</span>
+              Skicka sms<span className="sr-only"> till {booking.phone}</span>
             </a>
           </span>
         </Detail>
@@ -263,7 +263,7 @@ function EmailUnavailable({ booking, reason }: { booking: ManagedBooking; reason
           Ring {booking.phone}
         </a>
         <a href={`sms:${phone}`} className={buttonClasses("secondary", "md")}>
-          Skicka SMS
+          Skicka sms
         </a>
       </div>
     </section>
@@ -475,7 +475,7 @@ function ConfirmForm({ token, booking }: { token: string; booking: ManagedBookin
                   Ring {booking.phone}
                 </a>
                 <a href={`sms:${phone}`} className="font-semibold underline underline-offset-2">
-                  Skicka SMS
+                  Skicka sms
                 </a>
               </p>
             )}

@@ -5,7 +5,7 @@ import { ResponseTimeNote } from "@/components/contact-details";
 import { Section } from "@/components/ui";
 
 export const metadata: Metadata = {
-  title: "Vanliga frågor om bilvård, mobil service och bokning",
+  title: "Vanliga frågor om bilvård, mobil bilvård och bokning",
   description: `Svar på vanliga frågor om ${site.name}s biltvätt, invändiga rengöring, mobila bilvård, hämtning och lämning, reseavgift, betalning och bokning i ${site.baseTown}.`,
   alternates: { canonical: "/vanliga-fragor" },
 };

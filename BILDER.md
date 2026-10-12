@@ -81,7 +81,7 @@ Vad fälten betyder:
 | `title` | Rubriken under bilden, t.ex. `"Utvändig tvätt"`. |
 | `category` | `"interior"` (invändigt) eller `"exterior"` (utvändigt). Styr filtret i galleriet. |
 | `vehicle` | Bilmodellen, t.ex. `"Volvo V60"`. Vill du inte visa modellen: skriv `null` (utan citattecken). |
-| `serviceId` | Vilken tjänst det var: `"exterior"`, `"interior"` eller `"complete"` (in- och utvändigt). |
+| `serviceId` | Vilken tjänst det var: `"exterior"`, `"interior"` eller `"complete"` (in- och utvändigt). Tjänstens namn visas under bilderna. Skriv `null` (utan citattecken) om ni inte vill visa vilken tjänst det var. |
 | `before` / `after` | `src` = bildens adress (se rutan ovan). `alt` = en kort beskrivning av bilden för synskadade och Google. |
 | `placeholder` | Ska vara `false` för riktiga bilder. `true` betyder exempelbild och märks som "Exempel" på sidan. |
 | `note` | *Valfritt.* En kort rad om jobbet, t.ex. `note: "Mycket hundhår i baksätet.",` |

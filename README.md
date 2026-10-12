@@ -40,12 +40,19 @@ Everything business-related lives in **`src/config/site.ts`**:
   it updates everywhere (cards, tables, form summary, e-mails, FAQ, metadata, `llms.txt`).
 - `contact` – phone, e-mail, service area. `null` = not supplied yet. `responseTime` – the promised response time.
 - `hours` – working days and the current season (`currentSeason: "winter" | "summer"`); the booking form's start times
-  follow it.
+  follow it. Only start times where the chosen service (its `maxMinutes`) ends before closing time are offered, in the
+  form and on the server.
 - `travelZones`, `arrangements` (mobile service / pickup), `onSite` (what is needed on site), `payment`.
 - `social` – TikTok / Instagram / Facebook URLs.
-- `services[]` – price, what is included, approximate time and on-site needs (water/electricity) per service.
-- `faq` – questions and answers. `answer: null` shows a marked placeholder.
-- `gallery` – before/after projects (see below).
+- `services[]` – price, what is included, approximate time (`duration` text + `maxMinutes`, the upper bound in
+  minutes) and on-site needs (water/electricity) per service.
+- `comboSaving` – "X kr billigare än att boka delarna var för sig" and a badge on the combined service. Off
+  (`show: false`) until you approve the wording.
+- `about.story` – the paragraphs under *Vår historia* on `/om-oss`.
+- `faq` – questions and answers, built by `buildFaq()` at the bottom of the file from the values above (prices,
+  durations, on-site needs, payment, response time, phone, social links), so they stay in sync. Edit the wording there.
+- `gallery` – before/after projects (see below). `serviceId: null` = which service the job was is not confirmed yet,
+  so no service is shown under the photos.
 - `logo`, `heroImage` – set when you have a real logo / hero photo.
 - `showPlaceholders` – while `true`, missing information is shown as yellow **"FYLL I"** markers. Set it to
   `false` before launch: anything still missing is then hidden instead of shown.
@@ -64,7 +71,7 @@ Everything business-related lives in **`src/config/site.ts`**:
      title: "Invändig rengöring",
      category: "interior",            // or "exterior"
      vehicle: "VW Golf",
-     serviceId: "interior",
+     serviceId: "interior",            // or null if not confirmed
      before: { src: "/gallery/golf-before.jpg", alt: "VW Golf – baksäte före rengöring" },
      after:  { src: "/gallery/golf-after.jpg",  alt: "VW Golf – baksäte efter rengöring" },
      placeholder: false,
@@ -88,7 +95,8 @@ can be deleted. The hero graphic is still a drawn placeholder until `heroImage` 
    the customer chose *Vet inte*), arrangement, address, wished date/time, “Vi återkommer så snabbt vi kan – alltid inom
    24 timmar.”, what is needed on site (mobile service) or the pickup note, payment (Swish/kontanter, on site after the
    job) and your phone number and social links. It is only sent when customer e-mail is possible (see table); if it
-   fails, the request still succeeds (`customerEmailSent: false`).
+   fails, the request still succeeds (`customerEmailSent: false`), the success page tells the customer that no e-mail
+   copy was sent, and you get a short separate e-mail saying the receipt did not go out.
 4. **You confirm the time.** The e-mail you receive has a button *“Bekräfta tid och skicka bekräftelse”*. It opens
    `/hantera`, which shows the request and a short form (date, time, total price – prefilled from the request – and an
    optional message). Sending it e-mails the customer **“Din tid är bekräftad: …”** with *Reply-To* set to you and a
@@ -182,11 +190,20 @@ Success: `200 {ok: true, reference, customerEmailSent}`. Errors: `{ok: false, co
 - The server never stores or logs customer data. Only short technical error codes are logged
   (e.g. `[booking] … EAUTH SMTP 535` = wrong app password, `Resend svarade 403`).
 - Honeypot field, plus simple per-IP rate limits per server instance: 8 requests / 10 min for bookings, 30 for opening
-  a link, 10 for sending confirmations.
+  a link, 10 for sending confirmations. The key is the first `X-Forwarded-For` address, which Vercel sets itself; behind
+  another proxy that appends to that header, change `clientIp()` in `src/lib/http.ts`.
+- Automatic receipts are capped per server instance (20 per hour, 60 per 24 hours, `receiptBudget` in
+  `src/app/api/booking/route.ts`) so the form cannot be used to send mass e-mail from your Gmail. Above the cap the
+  request still reaches you, your e-mail says no receipt was sent, and the customer is told so. The counters live in
+  memory per instance; for real protection add a CAPTCHA (e.g. Cloudflare Turnstile) and/or a shared store (e.g.
+  Upstash Redis) before heavy traffic.
 - The receipt only contains what the customer entered in fixed fields (not the free-text message), and it is only sent
   to addresses that pass a strict check (no lists or display-name tricks). It ends with “if this wasn't you, ignore this
   e-mail”.
 - User input is HTML-escaped in every e-mail; attachments are always sent as data (nodemailer file/URL access is off).
+- Photos are checked on their content (JPEG/PNG/WEBP/HEIC signatures), not on the file name or the type the browser
+  claims; anything else is rejected with 422. Attachments are renamed `bild-1.jpg`, `bild-2.png` … with the detected
+  type, so no other file type can reach your inbox through the form.
 
 ## Analytics
 

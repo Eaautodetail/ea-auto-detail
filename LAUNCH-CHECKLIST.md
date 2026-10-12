@@ -38,14 +38,24 @@ changing them: the site address and the e-mail provider named on `/integritet` a
   3. Click *Bekräfta tid och skicka bekräftelse*, send a confirmation, and check that it arrives along with your Bcc copy.
 
 ## Recommended
+- [ ] **Which service was each gallery job?** The four photo pairs show no service name until you confirm it. For each
+      one (Svart bil, Framsäte i tyg, Lastutrymme i skåpbil, Baksäte i tyg) tell us whether it was *Utvändig biltvätt*,
+      *Invändig rengöring* or *Invändig + utvändig rengöring*, and whether stain removal (e.g. the front seat) was extra
+      work. Set `serviceId` in `site.ts` (see BILDER.md), or leave it `null`.
+- [ ] Spam protection: before heavy traffic, add a CAPTCHA (e.g. Cloudflare Turnstile) to `/boka`. The built-in limits
+      (per visitor, and at most 20 automatic receipts per hour) only live in each server instance's memory.
 - [ ] Check the photos before going live: the exterior and van photos show houses in the background. The number
       plates are already covered. See the privacy note in BILDER.md.
-- [ ] `/om-oss`: your first names, a line on how you started, and a photo of the two of you (`aboutImage`, see BILDER.md).
+- [ ] `/om-oss`: read the story (`about.story` in `site.ts`, written from your first brief) and rewrite it in your own
+      words; add your first names, a line on how you started, and a photo of the two of you (`aboutImage`, see BILDER.md).
 - [ ] Logo (`site.logo`) and a hero photo of your own work (`site.heroImage`), see BILDER.md.
-- [ ] Approve the wording "Mest prisvärt" and "49 kr billigare än att boka delarna var för sig". It is calculated from
-      the prices (149 + 249 kr compared with 349 kr), not a separate discount.
+- [ ] Optional: show "Mest prisvärt" and "49 kr billigare än att boka delarna var för sig" on the combined service. It is
+      calculated from the prices (149 + 249 kr compared with 349 kr), not a separate discount. Hidden now; set
+      `comboSaving.show: true` in `site.ts` if you want it.
 - [ ] Switch `hours.currentSeason` between `"winter"` and `"summer"` when the season changes. The hours shown and the
-      start times in the booking form follow it.
+      start times in the booking form follow it. The form only offers start times where the job (`maxMinutes` per
+      service: 45, 60 and 120 minutes) ends before closing, e.g. latest 16.00 for *Invändig + utvändig* in winter.
+      Change `maxMinutes` together with `duration` if your times change.
 - [ ] Decide on analytics + cookie consent if you want tracking (README → Analytics).
 
 ## Launch switches

@@ -33,23 +33,14 @@ export default function AboutPage() {
             <h2 id="historia-rubrik" className="font-display text-3xl font-bold text-white sm:text-4xl">
               Vår historia
             </h2>
-            <p>
-              Vi är två unga entreprenörer som gillar bilar – hur de ser ut, hur de känns och hur skönt det är att
-              sätta sig i en bil som är riktigt ren. Av det intresset växte idén om att starta ett eget
-              bilvårdsföretag.
-            </p>
-            <p>
-              Med {site.name} vill vi erbjuda bilvård som är noggrann men inte dyr, oavsett om det är familjens
-              vardagsbil eller en bil man har lagt ner sin själ i.
-            </p>
+            {/* Berättelsen redigeras i src/config/site.ts (about.story). */}
+            {site.about.story.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
             <p>
               Vi utgår från {site.baseTown} och jobbar {site.hours.days.toLowerCase()} i veckan ({hours.text} just nu).
               Antingen kommer vi till dig och tvättar bilen där den står, eller så hämtar vi bilen, gör jobbet hos oss
               och lämnar tillbaka den.
-            </p>
-            <p>
-              Vi är ett litet företag och bygger det steg för steg, ett jobb i taget. Är du nöjd blir vi glada om du
-              berättar det för någon du känner eller taggar oss i sociala medier.
             </p>
             {site.showPlaceholders && (
               <Placeholder>
