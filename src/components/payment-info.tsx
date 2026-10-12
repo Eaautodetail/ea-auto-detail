@@ -1,13 +1,9 @@
 /** Betalning – läses från `site.payment` i src/config/site.ts. */
-import { site } from "@/config/site";
+import { paymentMethodsText, site } from "@/config/site";
 import { InfoCard } from "@/components/ui";
 
-/** ["Swish", "Kontanter"] → "Swish eller kontanter". */
-export function paymentMethodsText(methods: readonly string[] = site.payment.methods) {
-  const items = methods.map((m, i) => (i === 0 ? m : m.charAt(0).toLowerCase() + m.slice(1)));
-  if (items.length <= 1) return items[0] ?? "";
-  return `${items.slice(0, -1).join(", ")} eller ${items[items.length - 1]}`;
-}
+/** ["Swish", "Kontanter"] → "Swish eller kontanter" (definieras i site.ts). */
+export { paymentMethodsText };
 
 export function PaymentMethodChips({ className = "" }: { className?: string }) {
   return (

@@ -60,11 +60,14 @@ export function Hero() {
             </ButtonLink>
           </div>
           <ResponseTimeNote className="hero-in hero-in-delay-3 mt-5" />
-          <dl className="hero-in hero-in-delay-3 mt-8 grid max-w-lg grid-cols-3 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 text-left">
+          <dl className="hero-in hero-in-delay-3 mt-8 grid max-w-lg gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 text-left sm:grid-cols-3">
             {facts.map((f) => (
-              <div key={f.label} className="bg-ink-950/70 px-3 py-3 backdrop-blur sm:px-4">
-                <dt className="text-[11px] leading-tight text-mist-400 sm:text-xs">{f.label}</dt>
-                <dd className="font-display mt-1 whitespace-nowrap text-sm font-bold text-white sm:text-base">{f.value}</dd>
+              <div
+                key={f.label}
+                className="flex items-baseline justify-between gap-4 bg-ink-950/70 px-4 py-2.5 backdrop-blur sm:block sm:py-3"
+              >
+                <dt className="text-sm text-mist-400 sm:text-xs">{f.label}</dt>
+                <dd className="font-display whitespace-nowrap text-sm font-bold text-white sm:mt-1 sm:text-base">{f.value}</dd>
               </div>
             ))}
           </dl>
@@ -72,7 +75,7 @@ export function Hero() {
       </Container>
 
       {!site.heroImage && site.showPlaceholders && (
-        <p className="absolute right-4 top-24 text-[10px] uppercase tracking-widest text-mist-400/70 sm:bottom-3 sm:top-auto">
+        <p className="absolute bottom-3 right-4 text-[10px] uppercase tracking-widest text-mist-400/70">
           Grafik – byt mot eget foto (se BILDER.md)
         </p>
       )}

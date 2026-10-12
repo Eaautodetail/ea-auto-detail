@@ -26,8 +26,8 @@ export function BookingButton({
       eventProps={{ location, service }}
       className={buttonClasses(variant, size, `group ${className}`)}
     >
-      {children}
-      <ArrowIcon className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+      <span className="min-w-0 whitespace-normal text-center leading-tight">{children}</span>
+      <ArrowIcon className="size-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
     </TrackedLink>
   );
 }

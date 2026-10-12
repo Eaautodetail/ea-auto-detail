@@ -101,9 +101,11 @@ export function Header() {
             href="/boka"
             event="booking_cta_click"
             eventProps={{ location: "header" }}
-            className={buttonClasses("primary", "md", "max-[379px]:hidden !px-4 sm:!px-5")}
+            className={buttonClasses("primary", "md", "max-[349px]:hidden !px-3.5 min-[380px]:!px-4 sm:!px-5")}
           >
-            Boka tid
+            {/* Kortare text på smala mobiler (360 px) så att knappen får plats bredvid loggan. */}
+            <span className="min-[380px]:hidden">Boka</span>
+            <span className="max-[379px]:hidden">Boka tid</span>
           </TrackedLink>
           <button
             ref={menuButton}

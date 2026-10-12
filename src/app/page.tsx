@@ -73,7 +73,7 @@ export default function HomePage() {
           <MoreLink href="/galleri">Hela galleriet</MoreLink>
         </div>
         <div className="mt-12">
-          <Gallery limit={2} showFilters={false} />
+          <Gallery preview showFilters={false} />
         </div>
       </Section>
 

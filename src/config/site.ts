@@ -43,6 +43,12 @@ export type Service = {
   includes: string[];
   /** Ungefärlig tidsåtgång, t.ex. "30–45 minuter". `null` = ej angivet. */
   duration: string | null;
+  /**
+   * Övre gränsen i `duration`, i minuter (t.ex. 45 för "30–45 minuter").
+   * Styr vilka starttider som går att välja i bokningen, så att jobbet hinns
+   * med före stängning. Ändra den tillsammans med `duration`.
+   */
+  maxMinutes?: number;
   /** Vad vi behöver tillgång till när vi jobbar hos kunden (mobil bilvård). */
   onSite: { electricity: boolean; water: boolean };
   highlighted?: boolean;
@@ -63,7 +69,8 @@ export type GalleryItem = {
   title: string;
   category: "interior" | "exterior";
   vehicle: string | null;
-  serviceId: ServiceId;
+  /** Vilken tjänst jobbet var. `null` = inte bekräftat ännu – då visas ingen tjänst under bilden. */
+  serviceId: ServiceId | null;
   before: { src: string; alt: string };
   after: { src: string; alt: string };
   /**
@@ -84,8 +91,10 @@ export type Faq = {
 
 const hoursText = (s: SeasonId) => `${SEASONS[s].open}–${SEASONS[s].close}`;
 
+const NAME = "EA Auto Detail";
+
 export const site = {
-  name: "EA Auto Detail",
+  name: NAME,
   /**
    * Används för sitemap, delningslänkar och länkar i mejl. Sätts via
    * NEXT_PUBLIC_SITE_URL, annars används Vercels produktionsadress automatiskt.
@@ -190,6 +199,7 @@ export const site = {
         "Torkning av bilen",
       ],
       duration: "30–45 minuter",
+      maxMinutes: 45,
       onSite: { electricity: true, water: true },
     },
     {
@@ -206,6 +216,7 @@ export const site = {
         "Rengöring av dörrkarmar",
       ],
       duration: "cirka 60 minuter",
+      maxMinutes: 60,
       onSite: { electricity: true, water: false },
     },
     {
@@ -216,10 +227,18 @@ export const site = {
       summary: "Allt som ingår i både den invändiga rengöringen och den utvändiga biltvätten – i ett och samma besök.",
       includes: ["Allt i utvändig biltvätt", "Allt i invändig rengöring"],
       duration: "1,5–2 timmar",
+      maxMinutes: 120,
       onSite: { electricity: true, water: true },
       highlighted: true,
     },
   ] satisfies Service[] as Service[],
+
+  /**
+   * "X kr billigare än att boka delarna var för sig" och en etikett på
+   * kombinationstjänsten. Besparingen räknas fram ur priserna ovan.
+   * Avstängt (`show: false`) tills ni har godkänt formuleringen.
+   */
+  comboSaving: { show: false, badge: "Mest prisvärt" },
 
   /** Tidsåtgången är alltid en uppskattning. */
   durationNote:
@@ -252,124 +271,81 @@ export const site = {
   },
 
   /**
-   * Galleri. Lägg egna bilder i /public/gallery/ och lägg till ett objekt
-   * per jobb (se BILDER.md). Platshållarna nedan ska tas bort när riktiga
-   * bilder finns.
+   * Texten under "Vår historia" på /om-oss, ett stycke per rad. Skriv gärna om
+   * den med egna ord. Arbetstider och upplägg läggs till automatiskt efteråt.
+   */
+  about: {
+    story: [
+      "Vi är två unga entreprenörer som gillar bilar – hur de ser ut, hur de känns och hur skönt det är att sätta sig i en bil som är riktigt ren. Av det intresset växte idén om att starta ett eget bilvårdsföretag.",
+      `Med ${NAME} vill vi erbjuda bilvård som är noggrann men inte dyr, oavsett om det är familjens vardagsbil eller en bil man har lagt ner sin själ i.`,
+      "Vi är ett litet företag och bygger det steg för steg, ett jobb i taget. Är du nöjd blir vi glada om du berättar det för någon du känner eller taggar oss i sociala medier.",
+    ] as string[],
+  },
+
+  /**
+   * Galleri med EA Auto Details egna före- och efterbilder (i /public/gallery/).
+   * Nya jobb läggs till som ett objekt per jobb – se BILDER.md. Det första
+   * jobbet i listan visas först, och de första visas också på startsidan.
+   * `serviceId: null` = vi vet inte vilken tjänst jobbet var, så ingen tjänst
+   * visas under bilden. Fyll i den när ni har bekräftat det.
    */
   gallery: [
     {
-      id: "exempel-utvandig",
-      title: "Utvändig tvätt",
+      id: "svart-bil-utvandig",
+      title: "Svart bil",
       category: "exterior",
       vehicle: null,
-      serviceId: "exterior",
-      before: { src: "/gallery/placeholder-exterior-before.svg", alt: "Platshållare: före utvändig tvätt" },
-      after: { src: "/gallery/placeholder-exterior-after.svg", alt: "Platshållare: efter utvändig tvätt" },
-      placeholder: true,
+      serviceId: null,
+      before: { src: "/gallery/utvandig-fore.jpg", alt: "Före: svart bil framifrån med dammig och smutsig lack." },
+      after: { src: "/gallery/utvandig-efter.jpg", alt: "Efter: samma bil framifrån, nytvättad och blank." },
+      placeholder: false,
     },
     {
-      id: "exempel-invandig",
-      title: "Invändig rengöring",
+      id: "framsate-invandig",
+      title: "Framsäte i tyg",
       category: "interior",
       vehicle: null,
-      serviceId: "interior",
-      before: { src: "/gallery/placeholder-interior-before.svg", alt: "Platshållare: före invändig rengöring" },
-      after: { src: "/gallery/placeholder-interior-after.svg", alt: "Platshållare: efter invändig rengöring" },
-      placeholder: true,
+      serviceId: null,
+      before: {
+        src: "/gallery/framsate-fore.jpg",
+        alt: "Före: ljust mönstrat framsäte i tyg med stora mörka fläckar på sittdynan.",
+      },
+      after: { src: "/gallery/framsate-efter.jpg", alt: "Efter: samma framsäte med ren sittdyna utan synliga fläckar." },
+      placeholder: false,
     },
     {
-      id: "exempel-komplett",
-      title: "Invändig + utvändig",
-      category: "exterior",
-      vehicle: null,
-      serviceId: "complete",
-      before: { src: "/gallery/placeholder-exterior-before.svg", alt: "Platshållare: före komplett rengöring" },
-      after: { src: "/gallery/placeholder-exterior-after.svg", alt: "Platshållare: efter komplett rengöring" },
-      placeholder: true,
-    },
-    {
-      id: "exempel-kupe",
-      title: "Kupé och säten",
+      id: "skapbil-lastutrymme",
+      title: "Lastutrymme i skåpbil",
       category: "interior",
       vehicle: null,
-      serviceId: "interior",
-      before: { src: "/gallery/placeholder-interior-before.svg", alt: "Platshållare: före rengöring av kupé" },
-      after: { src: "/gallery/placeholder-interior-after.svg", alt: "Platshållare: efter rengöring av kupé" },
-      placeholder: true,
+      serviceId: null,
+      before: { src: "/gallery/skapbil-fore.jpg", alt: "Före: lastutrymmet i en vit skåpbil med smutsigt och fläckigt golv." },
+      after: { src: "/gallery/skapbil-efter.jpg", alt: "Efter: samma lastutrymme med rent golv." },
+      placeholder: false,
+    },
+    {
+      id: "baksate-invandig",
+      title: "Baksäte i tyg",
+      category: "interior",
+      vehicle: null,
+      serviceId: null,
+      before: {
+        src: "/gallery/baksate-fore.jpg",
+        alt: "Före: mörkgrått baksäte i tyg med fläckar på sittdynan och smuts på golv och tröskel.",
+      },
+      after: { src: "/gallery/baksate-efter.jpg", alt: "Efter: samma baksäte, golv och tröskel rengjorda." },
+      placeholder: false,
     },
   ] satisfies GalleryItem[] as GalleryItem[],
 
-  faq: [
-    {
-      id: "vad-ingar",
-      question: "Vad ingår i de olika tjänsterna?",
-      answer:
-        `Utvändig biltvätt (${formatSEK(PRICE.exterior)}) är tvätt av kaross, fälgar, däck och utvändiga rutor samt torkning. Invändig rengöring (${formatSEK(PRICE.interior)}) är dammsugning, avtorkning av instrumentpanel och plastytor, invändiga rutor, dörrpaneler och dörrkarmar. Invändig + utvändig (${formatSEK(PRICE.complete)}) är båda delarna i samma besök.`,
-    },
-    {
-      id: "hur-lang-tid",
-      question: "Hur lång tid tar en rengöring?",
-      answer:
-        "Utvändig biltvätt tar ungefär 30–45 minuter, invändig rengöring cirka 60 minuter och invändig + utvändig 1,5–2 timmar. Tiderna är uppskattningar – det beror på bilens storlek, skick och hur smutsig den är.",
-    },
-    {
-      id: "mobil-service",
-      question: "Hur fungerar mobil bilvård?",
-      answer:
-        `Vi kommer till dig och tvättar bilen där den står. Då tillkommer en reseavgift: ${formatSEK(TRAVEL_FEE.near)} inom ca ${TRAVEL_KM.near} km från Kristianstad och ${formatSEK(TRAVEL_FEE.far)} upp till ${TRAVEL_KM.max} km (t.ex. Åhus). Skriv adressen i bokningsförfrågan så bekräftar vi avgiften.`,
-    },
-    {
-      id: "mobil-krav",
-      question: "Vad behöver finnas på plats när ni kommer till mig?",
-      answer:
-        "För invändig rengöring behöver vi tillgång till el. För utvändig biltvätt och för invändig + utvändig behöver vi tillgång till både vatten och el. Bilen behöver stå på en lämplig parkeringsplats där vi får plats att arbeta. Vi lägger en miljömatta under bilen som samlar upp tvättvattnet. Väljer du hämtning och lämning behöver du inte ordna något av detta.",
-    },
-    {
-      id: "hamtning",
-      question: "Hur fungerar hämtning och lämning?",
-      answer:
-        `Vi hämtar bilen, gör jobbet hos oss och lämnar tillbaka den när den är klar. Du behöver inte ordna vatten, el eller tvättplats. Samma reseavgift gäller som vid mobil bilvård: ${formatSEK(TRAVEL_FEE.near)} inom ca ${TRAVEL_KM.near} km från Kristianstad och ${formatSEK(TRAVEL_FEE.far)} upp till ${TRAVEL_KM.max} km. Tider och nyckelöverlämning bestämmer vi när vi bekräftar bokningen.`,
-    },
-    {
-      id: "extra-smutsig",
-      question: "Vad händer om bilen är extra smutsig?",
-      answer:
-        "Är bilen ovanligt smutsig eller behöver extra arbete kan en extra avgift tillkomma. Du får alltid veta vad det kostar och godkänna det innan vi gör extraarbetet.",
-    },
-    {
-      id: "boka",
-      question: "Hur bokar jag?",
-      answer:
-        "Fyll i bokningsförfrågan här på sidan. Välj tjänst, dag och tid och om vi ska komma till dig eller hämta bilen. En förfrågan är inte en bekräftad bokning – vi återkommer alltid inom 24 timmar och bekräftar tid och pris.",
-    },
-    {
-      id: "betalning",
-      question: "Hur betalar jag?",
-      answer: "Du kan betala med Swish eller kontanter. Betalningen sker på plats när jobbet är klart.",
-    },
-    {
-      id: "arbetstider",
-      question: "När jobbar ni?",
-      answer: `Vi jobbar alla dagar i veckan: ${hoursText("summer")} under den varmare delen av året och ${hoursText("winter")} under vinterhalvåret.`,
-    },
-    {
-      id: "svarstid",
-      question: "Hur snabbt svarar ni?",
-      answer: "Vi återkommer så snabbt vi kan, ofta direkt – och alltid inom 24 timmar.",
-    },
-    {
-      id: "kontakt",
-      question: "Hur kontaktar jag er?",
-      answer:
-        "Enklast är att skicka en bokningsförfrågan här på sidan. Du kan också ringa eller sms:a oss på 072-350 48 05 eller skriva till oss på Instagram, Facebook eller TikTok.",
-    },
-    {
-      id: "omrade",
-      question: "Vilka områden åker ni till?",
-      answer:
-        `Vi utgår från Kristianstad och åker upp till ca ${TRAVEL_KM.max} km därifrån, t.ex. till Åhus. Inom ca ${TRAVEL_KM.near} km är reseavgiften ${formatSEK(TRAVEL_FEE.near)} och mellan ${TRAVEL_KM.near} och ${TRAVEL_KM.max} km ${formatSEK(TRAVEL_FEE.far)}.`,
-    },
-  ] satisfies Faq[] as Faq[],
+  /**
+   * Vanliga frågor. Svaren byggs av uppgifterna ovan (priser, tider, krav på
+   * plats, betalning, kontakt), så de hålls uppdaterade automatiskt – se
+   * `buildFaq()` längre ned om du vill ändra formuleringarna.
+   */
+  get faq(): Faq[] {
+    return buildFaq();
+  },
 };
 
 export type Site = typeof site;
@@ -397,30 +373,75 @@ export function seasonHoursText(season: SeasonId) {
   return hoursText(season);
 }
 
+/** "09.00" → 540 (minuter efter midnatt). */
+function toMinutes(time: string) {
+  const [h, m] = time.split(".").map(Number);
+  return h * 60 + (m || 0);
+}
+
+/** 540 → "09.00". */
+function fromMinutes(minutes: number) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(Math.floor(minutes / 60))}.${pad(minutes % 60)}`;
+}
+
 /**
- * Starttider kunden kan välja i bokningen: varje hel timme från öppning till
- * en timme före stängning enligt aktuell säsong, plus "Flexibel".
+ * Starttider kunden kan välja i bokningen: varje hel timme från öppning enligt
+ * aktuell säsong, plus "Flexibel". Med en vald tjänst visas bara tider då
+ * jobbet hinns med före stängning (utifrån tjänstens `maxMinutes`), annars
+ * fram till en timme före stängning. Samma regel används i formuläret och på servern.
  */
-export function bookingTimes(): string[] {
+export function bookingTimes(serviceId?: string | null): string[] {
   const { open, close } = currentHours();
-  const first = parseInt(open, 10);
-  const last = parseInt(close, 10) - 1;
+  const length = getService(serviceId)?.maxMinutes ?? 60;
+  const closeAt = toMinutes(close);
   const times: string[] = [];
-  for (let h = first; h <= last; h++) times.push(`${String(h).padStart(2, "0")}.00`);
+  for (let t = toMinutes(open); t + length <= closeAt; t += 60) times.push(fromMinutes(t));
   return [...times, "Flexibel"];
 }
 
-/** Vad vi behöver på plats vid mobil bilvård för en viss tjänst. */
+/** Senaste starttiden för en tjänst, t.ex. "16.00". `null` om ingen tid passar. */
+export function latestStartTime(serviceId?: string | null): string | null {
+  const times = bookingTimes(serviceId).filter((t) => t !== "Flexibel");
+  return times[times.length - 1] ?? null;
+}
+
+/** Vad en tjänst kräver på plats vid mobil bilvård, t.ex. "Tillgång till vatten och el". */
+export function utilityNeed(service: Service): string | null {
+  const { water, electricity } = service.onSite;
+  if (water && electricity) return "Tillgång till vatten och el";
+  if (electricity) return "Tillgång till el";
+  if (water) return "Tillgång till vatten";
+  return null;
+}
+
+/**
+ * Vad kunden behöver ordna vid mobil bilvård för en viss tjänst. Utöver det
+ * gäller alltid `site.onSite.mat` (miljömattan) vid mobil bilvård.
+ */
 export function onSiteNeeds(serviceId: string | null | undefined): string[] {
   const service = getService(serviceId);
   const needs: string[] = [];
-  if (service) {
-    if (service.onSite.water && service.onSite.electricity) needs.push("Tillgång till vatten och el");
-    else if (service.onSite.electricity) needs.push("Tillgång till el");
-    else if (service.onSite.water) needs.push("Tillgång till vatten");
-  }
+  const utility = service ? utilityNeed(service) : null;
+  if (utility) needs.push(utility);
   needs.push(site.onSite.parking);
   return needs;
+}
+
+/** "a", "a och b", "a, b och c". */
+function listText(items: string[], conjunction = "och") {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")} ${conjunction} ${items[items.length - 1]}`;
+}
+
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
+
+/** ["Swish", "Kontanter"] → "Swish eller kontanter". */
+export function paymentMethodsText(methods: readonly string[] = site.payment.methods) {
+  return listText(
+    methods.map((m, i) => (i === 0 ? m : lowerFirst(m))),
+    "eller",
+  );
 }
 
 export const socialLinks = (
@@ -438,3 +459,101 @@ export const navigation = [
   { href: "/vanliga-fragor", label: "Vanliga frågor" },
   { href: "/kontakt", label: "Kontakt" },
 ] as const;
+
+/**
+ * Svaren på vanliga frågor. Allt som är fakta (priser, tider, krav på plats,
+ * betalning, svarstid, kontakt) hämtas från `site` ovan, så ändringar där
+ * slår igenom här och i FAQ-datan till Google utan att något behöver skrivas om.
+ */
+function buildFaq(): Faq[] {
+  const { services, onSite, contact } = site;
+  const zonesText = `${formatSEK(TRAVEL_FEE.near)} inom ca ${TRAVEL_KM.near} km från ${site.baseTown} och ${formatSEK(TRAVEL_FEE.far)} upp till ${TRAVEL_KM.max} km`;
+
+  const timed = services.filter((s) => s.duration);
+
+  // Gruppera tjänsterna efter vad de kräver på plats ("vatten och el", "el").
+  const byNeed = new Map<string, string[]>();
+  for (const s of services) {
+    const need = utilityNeed(s);
+    if (need) byNeed.set(need, [...(byNeed.get(need) ?? []), lowerFirst(s.name)]);
+  }
+
+  const socials = socialLinks.filter((l) => l.href).map((l) => l.label);
+  const otherWays = [
+    contact.phone ? `ringa eller sms:a oss på ${contact.phone}` : null,
+    socials.length ? `skriva till oss på ${listText(socials, "eller")}` : null,
+  ].filter((x): x is string => !!x);
+
+  return [
+    {
+      id: "vad-ingar",
+      question: "Vad ingår i de olika tjänsterna?",
+      answer: services
+        .map((s) => `${s.name} (${formatSEK(s.price)}): ${listText(s.includes.map(lowerFirst))}.`)
+        .join(" "),
+    },
+    {
+      id: "hur-lang-tid",
+      question: "Hur lång tid tar en rengöring?",
+      answer: timed.length
+        ? `Ungefärlig tidsåtgång: ${listText(timed.map((s) => `${lowerFirst(s.name)} ${s.duration}`))}. ${site.durationNote}`
+        : null,
+      placeholderHint: "Ange ungefärlig tid per tjänst (duration i site.ts).",
+    },
+    {
+      id: "mobil-service",
+      question: "Hur fungerar mobil bilvård?",
+      answer: `${getArrangement("visit")?.description ?? ""} Då tillkommer en reseavgift: ${zonesText} (t.ex. Åhus). Skriv adressen i bokningsförfrågan så bekräftar vi avgiften.`.trim(),
+    },
+    {
+      id: "mobil-krav",
+      question: "Vad behöver finnas på plats när ni kommer till mig?",
+      answer: [
+        ...Array.from(byNeed, ([need, names]) => `För ${listText(names)} behöver vi ${lowerFirst(need)}.`),
+        `Vi behöver också ${lowerFirst(onSite.parking)}`,
+        onSite.mat,
+        onSite.pickupNote,
+      ].join(" "),
+    },
+    {
+      id: "hamtning",
+      question: "Hur fungerar hämtning och lämning?",
+      answer: `${getArrangement("pickup")?.description ?? ""} Du behöver inte ordna vatten, el eller tvättplats. Samma reseavgift gäller som vid mobil bilvård: ${zonesText}. Tider och nyckelöverlämning bestämmer vi när vi bekräftar bokningen.`.trim(),
+    },
+    {
+      id: "extra-smutsig",
+      question: "Vad händer om bilen är extra smutsig?",
+      answer: site.extraWorkNote,
+    },
+    {
+      id: "boka",
+      question: "Hur bokar jag?",
+      answer: `Fyll i bokningsförfrågan här på sidan. Välj tjänst, dag och tid och om vi ska komma till dig eller hämta bilen. En förfrågan är inte en bekräftad bokning – vi bekräftar tid och pris innan bokningen gäller. ${site.responseTime}`,
+    },
+    {
+      id: "betalning",
+      question: "Hur betalar jag?",
+      answer: `Du kan betala med ${paymentMethodsText()}. ${site.payment.when}`,
+    },
+    {
+      id: "arbetstider",
+      question: "När jobbar ni?",
+      answer: `Vi jobbar ${site.hours.days.toLowerCase()} i veckan: ${hoursText("summer")} under den varmare delen av året och ${hoursText("winter")} under vinterhalvåret.`,
+    },
+    {
+      id: "svarstid",
+      question: "Hur snabbt svarar ni?",
+      answer: `${site.responseTime} Ofta svarar vi direkt.`,
+    },
+    {
+      id: "kontakt",
+      question: "Hur kontaktar jag er?",
+      answer: `Enklast är att skicka en bokningsförfrågan här på sidan.${otherWays.length ? ` Du kan också ${listText(otherWays, "eller")}.` : ""}`,
+    },
+    {
+      id: "omrade",
+      question: "Vilka områden åker ni till?",
+      answer: `Vi utgår från ${site.baseTown} och åker upp till ca ${TRAVEL_KM.max} km därifrån, t.ex. till Åhus. Inom ca ${TRAVEL_KM.near} km är reseavgiften ${formatSEK(TRAVEL_FEE.near)} och mellan ${TRAVEL_KM.near} och ${TRAVEL_KM.max} km ${formatSEK(TRAVEL_FEE.far)}.`,
+    },
+  ];
+}

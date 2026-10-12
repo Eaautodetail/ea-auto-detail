@@ -8,7 +8,8 @@
  * Därefter får kunden ett automatiskt KVITTO på att förfrågan har tagits emot
  * (inte en bekräftelse), om e-post till kunder är konfigurerad. Att kvittot inte
  * går iväg gör aldrig att förfrågan misslyckas – svaret säger bara
- * `customerEmailSent: false`.
+ * `customerEmailSent: false`. Antalet kvitton per serverinstans har ett tak
+ * (`receiptBudget`) så att ingen kan använda formuläret för att skicka massutskick.
  *
  * Är ingen kanal till företaget konfigurerad svarar routen 503 och formuläret
  * visar det ärligt för besökaren – inga låtsasbekräftelser.
@@ -17,6 +18,7 @@
  */
 import {
   bookingAsText,
+  detectImageType,
   emptyBooking,
   priceSummary,
   todayInSweden,
@@ -26,8 +28,13 @@ import {
 } from "@/lib/booking";
 import { manageBookingUrl, sealBookingToken } from "@/lib/booking-token";
 import { DeliveryError, describeDeliveryError, emailConfig, isSafeRecipient, sendEmail, type EmailConfig } from "@/lib/email";
-import { businessNotificationEmail, customerReceiptEmail } from "@/lib/email-templates";
-import { clientIp, createRateLimiter, json, publicOrigin } from "@/lib/http";
+import {
+  businessNotificationEmail,
+  customerReceiptEmail,
+  receiptFailedNotice,
+  type CustomerReceiptStatus,
+} from "@/lib/email-templates";
+import { clientIp, createBudget, createRateLimiter, json, publicOrigin } from "@/lib/http";
 
 // Körs i Node.js-runtime (standard i Next 16; nodemailer kräver det). `export const runtime`
 // får inte anges när cacheComponents är på.
@@ -37,6 +44,19 @@ export const maxDuration = 30;
 type Photo = { filename: string; contentType: string; content: Buffer; size: number };
 
 const isRateLimited = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 8 });
+
+/**
+ * Tak för automatiska kvitton till kunder, per serverinstans och oavsett avsändare.
+ * Skyddar företagets e-postkonto (t.ex. Gmails dagliga sändningsgräns) om någon
+ * skickar många förfrågningar med andras adresser. Över taket kommer förfrågan
+ * fortfarande fram till företaget, men kunden får inget kvitto.
+ */
+const receiptBudget = createBudget([
+  { windowMs: 60 * 60 * 1000, max: 20 },
+  { windowMs: 24 * 60 * 60 * 1000, max: 60 },
+]);
+
+const PHOTO_TYPE_ERROR = "Bara bilder (JPG, PNG, WEBP eller HEIC) kan bifogas.";
 
 function makeReference() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -50,7 +70,7 @@ async function notifyBusinessByEmail(
   reference: string,
   photos: Photo[],
   manageUrl: string | null,
-  customerReceipt: "sending" | "not_configured" | "invalid_address",
+  customerReceipt: CustomerReceiptStatus,
 ) {
   const email = businessNotificationEmail(fields, reference, photos.length, { manageUrl, customerReceipt });
   await sendEmail(
@@ -132,6 +152,27 @@ export async function POST(request: Request) {
   const files = form.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
   const photoError = validatePhotos(files);
   if (photoError) errors.photos = photoError;
+
+  // Bilderna kontrolleras på innehållet, inte på filnamnet eller typen webbläsaren uppger.
+  // Bilagorna får egna namn (bild-1.jpg …) så att inget annat än bilder kan skickas vidare.
+  let photos: Photo[] = [];
+  if (!photoError && files.length > 0) {
+    const read = await Promise.all(
+      files.map(async (f) => {
+        const content = Buffer.from(await f.arrayBuffer());
+        return { content, image: detectImageType(content) };
+      }),
+    );
+    if (read.some((r) => !r.image)) errors.photos = PHOTO_TYPE_ERROR;
+    else
+      photos = read.map((r, i) => ({
+        filename: `bild-${i + 1}.${r.image!.ext}`,
+        contentType: r.image!.type,
+        size: r.content.length,
+        content: r.content,
+      }));
+  }
+
   if (Object.keys(errors).length > 0) {
     return json({ ok: false, code: "validation", message: "Kontrollera de markerade fälten.", errors }, 422);
   }
@@ -149,19 +190,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const photos: Photo[] = await Promise.all(
-    files.map(async (f, i) => ({
-      filename: f.name?.replace(/[^\w.\-]/g, "_").slice(0, 80) || `bild-${i + 1}.jpg`,
-      contentType: f.type || "application/octet-stream",
-      size: f.size,
-      content: Buffer.from(await f.arrayBuffer()),
-    })),
-  );
-
   const reference = makeReference();
   const text = bookingAsText(fields, reference, photos.length);
-  const customerAddressOk = isSafeRecipient(fields.email);
-  const customerReceipt = !mail.canEmailCustomers ? "not_configured" : customerAddressOk ? "sending" : "invalid_address";
+  const customerReceipt: CustomerReceiptStatus = !mail.canEmailCustomers
+    ? "not_configured"
+    : !isSafeRecipient(fields.email)
+      ? "invalid_address"
+      : !receiptBudget.take()
+        ? "limited"
+        : "sending";
 
   // Krypterad länk så att företaget kan bekräfta tiden från /hantera (ingen databas behövs).
   const { base, zone, arrangement } = priceSummary(fields.service, fields.arrangement, fields.travelZone);
@@ -183,11 +220,13 @@ export async function POST(request: Request) {
   const manageUrl = token ? manageBookingUrl(publicOrigin(request), token) : null;
 
   const deliveries: Promise<void>[] = [];
-  if (mail.canNotifyBusiness) {
-    deliveries.push(notifyBusinessByEmail(mail, fields, reference, photos, manageUrl, customerReceipt));
-  }
+  const businessEmail = mail.canNotifyBusiness
+    ? notifyBusinessByEmail(mail, fields, reference, photos, manageUrl, customerReceipt)
+    : null;
+  if (businessEmail) deliveries.push(businessEmail);
   if (webhookConfigured) deliveries.push(notifyWebhook(fields, text, reference, photos));
   const results = await Promise.allSettled(deliveries);
+  const businessEmailDelivered = !!businessEmail && results[0]?.status === "fulfilled";
 
   const failed = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
   // Logga bara tekniska fel – aldrig kundens uppgifter.
@@ -217,6 +256,12 @@ export async function POST(request: Request) {
       customerEmailSent = true;
     } catch (error) {
       console.error("[booking] kvitto till kunden kunde inte skickas:", describeDeliveryError(error));
+      // Företagets mejl sa att ett kvitto skickas – meddela att det inte gick fram.
+      if (businessEmailDelivered) {
+        await sendEmail({ to: mail.businessRecipients, ...receiptFailedNotice(reference) }, mail).catch((e) =>
+          console.error("[booking] meddelande om misslyckat kvitto kunde inte skickas:", describeDeliveryError(e)),
+        );
+      }
     }
   }
 

@@ -2,7 +2,7 @@
  * Gemensam validering för bokningsförfrågan. Används både i formuläret
  * (direkt feedback) och i API-routen (servern litar aldrig på klienten).
  */
-import { bookingTimes, getArrangement, getService, getTravelZone } from "@/config/site";
+import { bookingTimes, currentHours, getArrangement, getService, getTravelZone, latestStartTime } from "@/config/site";
 
 export const PHOTO_LIMITS = {
   maxFiles: 5,
@@ -99,9 +99,15 @@ export function validateField(field: BookingField, v: BookingFields, today: stri
       if (value > addDays(today, 365)) return "Välj ett datum inom ett år.";
       return;
     }
-    case "time":
-      if (!bookingTimes().includes(value)) return "Välj en önskad tid.";
-      return;
+    case "time": {
+      if (bookingTimes(v.service).includes(value)) return;
+      // En tid inom arbetstiderna som inte hinns med för vald tjänst.
+      const service = getService(v.service);
+      const latest = latestStartTime(v.service);
+      if (service && latest && bookingTimes().includes(value))
+        return `Välj en starttid senast kl. ${latest} för ${service.name.toLowerCase()}, så hinner vi klart före ${currentHours().close}.`;
+      return "Välj en önskad tid.";
+    }
     case "arrangement":
       if (!getArrangement(value)) return "Välj mobil bilvård eller hämtning och lämning.";
       return;
@@ -143,6 +149,29 @@ export function validateBooking(v: BookingFields, today: string): BookingErrors 
     if (error) errors[field] = error;
   }
   return errors;
+}
+
+/** Bildformat vi tar emot, med filändelse för bilagan. */
+export type DetectedImage = { type: "image/jpeg" | "image/png" | "image/webp" | "image/heic" | "image/heif"; ext: string };
+
+const ascii = (bytes: Uint8Array, start: number, end: number) => String.fromCharCode(...bytes.subarray(start, end));
+
+/**
+ * Känner igen bildformatet från filens första byte ("magic bytes") i stället
+ * för att lita på filnamnet eller den typ webbläsaren uppger. `null` = inte en
+ * bild vi tar emot.
+ */
+export function detectImageType(bytes: Uint8Array): DetectedImage | null {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return { type: "image/jpeg", ext: "jpg" };
+  if (bytes.length >= 8 && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((b, i) => bytes[i] === b))
+    return { type: "image/png", ext: "png" };
+  if (bytes.length >= 12 && ascii(bytes, 0, 4) === "RIFF" && ascii(bytes, 8, 12) === "WEBP") return { type: "image/webp", ext: "webp" };
+  if (bytes.length >= 12 && ascii(bytes, 4, 8) === "ftyp") {
+    const brand = ascii(bytes, 8, 12);
+    if (["heic", "heix", "hevc", "hevx", "heim", "heis"].includes(brand)) return { type: "image/heic", ext: "heic" };
+    if (["mif1", "msf1", "heif"].includes(brand)) return { type: "image/heif", ext: "heif" };
+  }
+  return null;
 }
 
 export function validatePhotos(files: { size: number; type: string }[]): string | undefined {

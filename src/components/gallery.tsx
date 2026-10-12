@@ -23,15 +23,18 @@ export function Gallery({
   items = site.gallery,
   limit,
   showFilters = true,
+  preview = false,
 }: {
   items?: GalleryItem[];
   limit?: number;
   showFilters?: boolean;
+  /** Startsidans förhandsvisning: två jobb på mobil/surfplatta, tre på dator. */
+  preview?: boolean;
 }) {
   const [filter, setFilter] = useState<FilterId>("all");
   const visibleItems = (site.showPlaceholders ? items : items.filter((i) => !i.placeholder))
     .filter((i) => filter === "all" || i.category === filter)
-    .slice(0, limit);
+    .slice(0, preview ? 3 : limit);
   const hasPlaceholders = visibleItems.some((i) => i.placeholder);
 
   return (
@@ -71,13 +74,13 @@ export function Gallery({
           <SocialLinks />
         </div>
       ) : (
-        <ul className="grid gap-6 md:grid-cols-2">
-          {visibleItems.map((item) => {
+        <ul className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleItems.map((item, index) => {
             const service = getService(item.serviceId);
             return (
-              <li key={item.id} className="reveal">
+              <li key={item.id} className={`reveal ${preview && index === 2 ? "hidden lg:block" : ""}`}>
                 <figure className="rounded-2xl border border-white/10 bg-ink-900 p-3">
-                  <BeforeAfter before={item.before} after={item.after} label={item.title} placeholder={item.placeholder} />
+                  <BeforeAfter before={item.before} after={item.after} label={item.title} />
                   <figcaption className="flex items-start justify-between gap-4 px-2 pb-1 pt-4">
                     <span>
                       <span className="block font-semibold text-white">{item.title}</span>

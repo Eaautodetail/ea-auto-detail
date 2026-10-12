@@ -28,7 +28,7 @@ export function PageHero({
       />
       <Container>
         <Eyebrow className="hero-in mb-4">{eyebrow}</Eyebrow>
-        <h1 className="hero-in hero-in-delay-1 font-display max-w-3xl text-4xl font-extrabold leading-[1.02] tracking-tight text-white sm:text-6xl">
+        <h1 className="hero-in hero-in-delay-1 font-display max-w-3xl break-words text-4xl font-extrabold leading-[1.02] tracking-tight text-white sm:text-6xl">
           {title}
         </h1>
         {intro && <p className="hero-in hero-in-delay-2 mt-6 max-w-2xl text-lg leading-relaxed text-mist-300">{intro}</p>}

@@ -858,7 +858,7 @@ function SuccessPanel({
             på{" "}
             <a
               href={`tel:${site.contact.phoneHref}`}
-              className="font-semibold text-white underline underline-offset-4"
+              className="whitespace-nowrap font-semibold text-white underline underline-offset-4"
             >
               {site.contact.phone}
             </a>

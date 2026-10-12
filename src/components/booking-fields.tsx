@@ -5,6 +5,22 @@
 import type { ReactNode } from "react";
 import { CheckIcon } from "@/components/ui";
 
+/**
+ * "Namn *" → "Namn" + en asterisk som bara syns. Att fältet är obligatoriskt
+ * meddelas i stället via `required` på själva fältet, så att skärmläsare säger
+ * "obligatoriskt" i stället för "asterisk".
+ */
+export function RequiredText({ children }: { children: ReactNode }) {
+  if (typeof children === "string" && children.endsWith(" *")) {
+    return (
+      <>
+        {children.slice(0, -2)} <span aria-hidden="true">*</span>
+      </>
+    );
+  }
+  return <>{children}</>;
+}
+
 export function Legend({ step, children }: { step: number; children: ReactNode }) {
   return (
     <legend className="mb-4 flex items-center gap-3 font-display text-lg font-bold text-white">
@@ -14,7 +30,9 @@ export function Legend({ step, children }: { step: number; children: ReactNode }
       >
         {step}
       </span>
-      {children}
+      <span>
+        <RequiredText>{children}</RequiredText>
+      </span>
     </legend>
   );
 }
@@ -59,7 +77,7 @@ function Label({ id, label, hint }: { id: string; label: string; hint?: string }
   return (
     <>
       <label htmlFor={id} className="text-sm font-medium text-white">
-        {label}
+        <RequiredText>{label}</RequiredText>
       </label>
       {hint && (
         <p id={`${id}-hint`} className="mt-1 text-sm text-mist-400">
@@ -146,7 +164,8 @@ export function SelectField({
   describedBy,
   options,
   placeholder,
-}: FieldProps & { options: { value: string; label: string }[]; placeholder?: string }) {
+  required,
+}: FieldProps & { options: { value: string; label: string }[]; placeholder?: string; required?: boolean }) {
   return (
     <div>
       <Label id={id} label={label} hint={hint} />
@@ -156,6 +175,7 @@ export function SelectField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
+        required={required}
         aria-invalid={!!error}
         aria-describedby={ariaDescribedBy(id, hint, error, describedBy)}
         className={`${inputClasses(error)} appearance-none bg-[url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m6 8 4 4 4-4' stroke='%23b0b2b8' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E")] bg-[length:1.25rem] bg-[right_0.9rem_center] bg-no-repeat pr-10`}
@@ -186,6 +206,7 @@ export function OptionCard({
   description,
   meta,
   invalid,
+  required,
 }: {
   name: string;
   value: string;
@@ -195,6 +216,7 @@ export function OptionCard({
   description?: ReactNode;
   meta: string;
   invalid?: boolean;
+  required?: boolean;
 }) {
   return (
     <label
@@ -206,7 +228,16 @@ export function OptionCard({
             : "border-white/15 bg-ink-900 hover:border-white/35"
       }`}
     >
-      <input type="radio" name={name} value={value} checked={checked} onChange={onChange} className="sr-only" />
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        checked={checked}
+        onChange={onChange}
+        required={required}
+        aria-invalid={invalid || undefined}
+        className="sr-only"
+      />
       <span className="flex items-start justify-between gap-3">
         <span className="font-semibold leading-snug text-white">{title}</span>
         <span

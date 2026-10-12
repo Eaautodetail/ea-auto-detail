@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { site } from "@/config/site";
 import { formatSEK } from "@/lib/format";
 
-export const alt = `${site.name} – bilvård, biltvätt och mobil bilvård`;
+export const alt = `${site.name} – bilvård, biltvätt och mobil bilvård i ${site.baseTown}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -46,7 +46,10 @@ export default function OpengraphImage() {
           <div style={{ fontSize: 88, fontWeight: 900, lineHeight: 1 }}>Ren bil.</div>
           <div style={{ fontSize: 88, fontWeight: 900, lineHeight: 1.05, color: "#b0b2b8" }}>Utan krångel.</div>
           <div style={{ marginTop: 32, fontSize: 30, color: "#d4d5d9" }}>
-            {`Biltvätt & invändig rengöring från ${formatSEK(lowest)} · Mobil service`}
+            {`Biltvätt & invändig rengöring från ${formatSEK(lowest)}`}
+          </div>
+          <div style={{ marginTop: 8, fontSize: 30, color: "#b0b2b8" }}>
+            {`Mobil bilvård eller hämtning · ${site.baseTown} med omnejd`}
           </div>
         </div>
       </div>

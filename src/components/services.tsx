@@ -4,6 +4,7 @@ import { BookingButton } from "@/components/booking-button";
 import { CheckIcon, Icon, InfoCard } from "@/components/ui";
 import { TravelFeeZones } from "@/components/travel-fees";
 import { UtilityIcons, utilitiesLabel } from "@/components/on-site-info";
+import { paymentMethodsText } from "@/components/payment-info";
 
 /** "cirka 60 minuter" → "Cirka 60 minuter". */
 function capitalize(text: string) {
@@ -97,10 +98,18 @@ function ServiceCard({ service, headingLevel: H }: { service: Service; headingLe
   );
 }
 
-/** Tidsåtgång och extraarbete – gäller alla tjänster. */
-export function ServiceNotes({ titleAs = "h3", className = "" }: { titleAs?: "h2" | "h3" | "p"; className?: string }) {
+/** Tidsåtgång och extraarbete (och ev. betalning) – gäller alla tjänster. */
+export function ServiceNotes({
+  titleAs = "h3",
+  showPayment = false,
+  className = "",
+}: {
+  titleAs?: "h2" | "h3" | "p";
+  showPayment?: boolean;
+  className?: string;
+}) {
   return (
-    <InfoCard icon="info" title="Bra att veta om priser och tider" titleAs={titleAs} className={className}>
+    <InfoCard icon="info" title="Bra att veta" titleAs={titleAs} className={className}>
       <div className="space-y-4 text-sm leading-relaxed text-mist-300">
         <p>
           <strong className="block font-semibold text-white">Extra smutsig bil?</strong>
@@ -110,17 +119,23 @@ export function ServiceNotes({ titleAs = "h3", className = "" }: { titleAs?: "h2
           <strong className="block font-semibold text-white">Tiderna är uppskattningar</strong>
           {site.durationNote}
         </p>
+        {showPayment && (
+          <p>
+            <strong className="block font-semibold text-white">Betalning</strong>
+            {paymentMethodsText()}. {site.payment.when}
+          </p>
+        )}
       </div>
     </InfoCard>
   );
 }
 
 /** Reseavgift + villkor – visas direkt under tjänstekorten. */
-export function PricingTerms({ titleAs = "h3" }: { titleAs?: "h2" | "h3" | "p" }) {
+export function PricingTerms({ titleAs = "h3", showPayment = true }: { titleAs?: "h2" | "h3" | "p"; showPayment?: boolean }) {
   return (
     <div className="reveal grid gap-5 md:grid-cols-2">
       <TravelFeeZones titleAs={titleAs} />
-      <ServiceNotes titleAs={titleAs} />
+      <ServiceNotes titleAs={titleAs} showPayment={showPayment} />
     </div>
   );
 }

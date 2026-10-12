@@ -218,7 +218,13 @@ export async function sendEmail(message: OutgoingEmail, config: EmailConfig = em
         html: message.html,
         ...(message.headers ? { headers: message.headers } : {}),
         ...(message.attachments?.length
-          ? { attachments: message.attachments.map((a) => ({ filename: a.filename, content: a.content.toString("base64") })) }
+          ? {
+              attachments: message.attachments.map((a) => ({
+                filename: a.filename,
+                content: a.content.toString("base64"),
+                ...(a.contentType ? { content_type: a.contentType } : {}),
+              })),
+            }
           : {}),
       }),
       signal: AbortSignal.timeout(15_000),

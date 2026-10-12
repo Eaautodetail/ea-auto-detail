@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { currentHours, site } from "@/config/site";
 import { PageHero, CtaBand, WhyUs } from "@/components/blocks";
 import { Placeholder, Section, SectionHeading } from "@/components/ui";
@@ -9,6 +10,12 @@ export const metadata: Metadata = {
   description: `${site.name} är ett litet bilvårdsföretag i ${site.baseTown} som drivs av två unga entreprenörer. Läs om hur och varför vi startade.`,
   alternates: { canonical: "/om-oss" },
 };
+
+/**
+ * Valfritt foto på grundarna. Läggs till som `aboutImage` i site.ts (se
+ * BILDER.md). Fältet är valfritt, så sidan fungerar även utan det.
+ */
+const aboutImage = (site as { aboutImage?: { src: string; alt: string } | null }).aboutImage ?? null;
 
 export default function AboutPage() {
   const hours = currentHours();
@@ -51,16 +58,31 @@ export default function AboutPage() {
             )}
           </div>
           <div className="reveal">
-            <div className="grain relative grid aspect-[4/5] place-items-center overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_60%_20%,#34353a_0%,#131416_60%)]">
-              <span aria-hidden="true" className="font-display text-[8rem] font-black italic leading-none tracking-tighter text-white/10">
-                EA
-              </span>
-              {site.showPlaceholders && (
-                <span className="absolute inset-x-6 bottom-6">
-                  <Placeholder>Plats för ett foto på er två (se BILDER.md).</Placeholder>
+            {aboutImage ? (
+              <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-ink-850">
+                <Image
+                  src={aboutImage.src}
+                  alt={aboutImage.alt}
+                  fill
+                  sizes="(min-width: 1024px) 40vw, 100vw"
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="grain relative grid aspect-[4/5] place-items-center overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_60%_20%,#34353a_0%,#131416_60%)]">
+                <span
+                  aria-hidden="true"
+                  className="font-display text-[8rem] font-black italic leading-none tracking-tighter text-white/10"
+                >
+                  EA
                 </span>
-              )}
-            </div>
+                {site.showPlaceholders && (
+                  <span className="absolute inset-x-6 bottom-6">
+                    <Placeholder>Plats för ett foto på er två (se BILDER.md).</Placeholder>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </Section>

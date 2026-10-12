@@ -28,7 +28,7 @@ export default function ContactPage() {
               Kontaktuppgifter
             </h2>
             <div className="mt-6">
-              <ContactDetails />
+              <ContactDetails showHours={false} />
             </div>
 
             <h2 className="font-display mt-12 text-2xl font-bold text-white sm:text-3xl">Sociala medier</h2>

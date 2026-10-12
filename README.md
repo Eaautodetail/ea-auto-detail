@@ -7,14 +7,14 @@ No paid services required. The only runtime dependency besides Next.js/React is 
 
 | Route | Content |
 | --- | --- |
-| `/` | Hero, services & prices, before/after gallery, why us, how booking works, social links, FAQ, contact + booking form |
-| `/tjanster` | Services & pricing, mobile-fee and extra-work terms, price table |
+| `/` | Hero, services & prices, travel fees, mobile service vs pickup, before/after gallery, why us, how booking works, hours/payment/response time, FAQ, contact + booking form |
+| `/tjanster` | Services & prices, travel fees by distance and a total-price table (`#totalpris`), mobile service vs pickup, payment, hours |
 | `/galleri` | Before/after gallery with interior/exterior filter and drag/keyboard slider |
 | `/boka` | Booking request form (`?tjanst=exterior|interior|complete` preselects a service) |
 | `/om-oss` | About the two founders |
 | `/vanliga-fragor` | FAQ (with FAQPage structured data for answered questions) |
 | `/kontakt` | Contact details, social links, booking CTA |
-| `/integritet` | Privacy policy **template** – review before publishing |
+| `/integritet` | Privacy policy – filled in from the real setup; legal name/org. no., retention period and web host still to be supplied |
 | `/sitemap.xml`, `/robots.txt`, `/opengraph-image`, `/llms.txt` | SEO, social sharing image, machine-readable summary for AI tools |
 | `POST /api/booking` | Receives booking requests, notifies the business and sends the customer a receipt (see below) |
 | `/hantera` | **Internal** page for the owners to confirm a request (opened from the link in the booking e-mail; noindex, not in nav/sitemap, blocked in robots.txt) |
@@ -36,19 +36,27 @@ Production check: `npm run build && npm start`. Lint: `npm run lint`.
 
 Everything business-related lives in **`src/config/site.ts`**:
 
-- `PRICE` and `MOBILE_FEE` at the top – change a price there and it updates everywhere (cards, table, form summary, FAQ, metadata, `llms.txt`).
-- `contact` – phone, e-mail, service area, availability. `null` = not supplied yet.
+- `PRICE`, `TRAVEL_FEE`, `TRAVEL_KM` and `SEASONS` at the top – change a price, fee, distance or opening time there and
+  it updates everywhere (cards, tables, form summary, e-mails, FAQ, metadata, `llms.txt`).
+- `contact` – phone, e-mail, service area. `null` = not supplied yet. `responseTime` – the promised response time.
+- `hours` – working days and the current season (`currentSeason: "winter" | "summer"`); the booking form's start times
+  follow it.
+- `travelZones`, `arrangements` (mobile service / pickup), `onSite` (what is needed on site), `payment`.
 - `social` – TikTok / Instagram / Facebook URLs.
-- `services[].includes` / `includesConfirmed` / `duration` – what each service includes and how long it takes.
+- `services[]` – price, what is included, approximate time and on-site needs (water/electricity) per service.
 - `faq` – questions and answers. `answer: null` shows a marked placeholder.
-- `gallery` – before/after projects.
+- `gallery` – before/after projects (see below).
 - `logo`, `heroImage` – set when you have a real logo / hero photo.
 - `showPlaceholders` – while `true`, missing information is shown as yellow **"FYLL I"** markers. Set it to
   `false` before launch: anything still missing is then hidden instead of shown.
 
 ### Adding before/after photos
 
-1. Put the images in `public/gallery/` (e.g. `golf-before.jpg`, `golf-after.jpg`, ideally 4:3, ~1600 px wide).
+**[BILDER.md](BILDER.md)** is a step-by-step guide in Swedish (upload on GitHub, edit `site.ts`, logo, hero and
+*Om oss* photo). In short:
+
+1. Put the images in `public/gallery/` (e.g. `golf-fore.jpg`, `golf-efter.jpg`, same angle and orientation, ~1200–1600 px
+   on the long side; portrait phone photos work as they are).
 2. Add an entry to `gallery` in `site.ts`:
    ```ts
    {
@@ -62,10 +70,10 @@ Everything business-related lives in **`src/config/site.ts`**:
      placeholder: false,
    },
    ```
-3. Delete the four `placeholder: true` example entries (and the `placeholder-*.svg` files) once you have real work.
+3. The first entries are also shown on the home page (two on phones and tablets, three on desktop).
 
-The current gallery images and the hero graphic are drawn placeholders. They are labelled as examples on the site and are
-not presented as customer work.
+The gallery shows EA Auto Detail's own photos (4 jobs). The old `placeholder-*.svg` example images are no longer used and
+can be deleted. The hero graphic is still a drawn placeholder until `heroImage` is set.
 
 ## Booking requests and e-mail
 
@@ -191,11 +199,11 @@ no analytics tool or cookie-consent solution has been chosen. Each event is also
 ## SEO
 
 - Swedish titles/descriptions per page, Open Graph/Twitter tags and a generated share image.
-- Targets: bilvård, biltvätt, invändig bilrengöring, utvändig biltvätt, mobil bilvård. No city names are used until a
-  service area is set.
+- Targets: bilvård, biltvätt, invändig bilrengöring, utvändig biltvätt, mobil bilvård, plus Kristianstad (and Åhus as an
+  example within the service area).
 - `robots.txt` **blocks indexing until `NEXT_PUBLIC_ALLOW_INDEXING=true`** so an unfinished site doesn't end up in Google.
-- `LocalBusiness` (AutoWash) structured data renders automatically **only** once a real site URL, phone number and
-  service area are configured.
+- `LocalBusiness` (AutoWash) structured data (no street address, hours from the current season) renders **only** when
+  the site URL is a real https address and a phone number is set.
 
 ## AI / marketing-agent friendly
 
@@ -215,8 +223,22 @@ under Vercel's request size limit.
 
 ## What was tested
 
-- `npm run lint` and `npm run build` pass with no errors or warnings.
-- All pages rendered in headless Chromium at 1440×900 and 390×844: HTTP 200, no console errors, no horizontal overflow.
+- `npx tsc --noEmit`, `npm run lint` and `npm run build` pass with no errors or warnings.
+- A build with dummy values in every secret variable was searched: none of them appear anywhere in `.next`
+  (client bundles or prerendered pages).
+- Production server (`next start`) end to end against a local SMTP test server with real TLS, both implicit TLS
+  (port 465 style) and STARTTLS:
+  - `POST /api/booking`: every validation error (422), honeypot and non-multipart bodies (400), the per-IP rate
+    limit (429), and successful requests with photos (200, `customerEmailSent: true`).
+  - The e-mails: the business e-mail (Reply-To = customer, photo attached, `/hantera#t=` link) and the customer
+    receipt ("tiden är inte bekräftad än", response time, price and travel fee).
+  - `/api/booking/open` and `/confirm`: a valid token works; tampered, truncated, expired, future-dated and
+    wrong-key tokens are rejected. The confirmation e-mail goes to the customer with a Bcc to the business, and
+    user input is HTML-escaped.
+  - Configuration paths: no e-mail settings gives 503 `not_configured`, and Resend-only with the test sender gives
+    502 `delivery_failed` when delivery fails. The server log contains only error codes.
+- All pages rendered in headless Chromium at 1280×900, 390×844, 360 and 320 px wide (including the filled booking form,
+  the success panel and `/hantera`): no console errors, no horizontal overflow.
 - Keyboard: skip link, mobile menu (focus trap, Escape closes, closes on navigation), gallery filter, before/after slider.
 - Booking form: client validation and error summary, server validation (via direct API calls), honeypot,
   "not configured" path, and a full successful submission with a photo to a local mock webhook.

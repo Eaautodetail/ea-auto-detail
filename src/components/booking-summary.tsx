@@ -3,7 +3,7 @@
  * direkt ovanför skicka-knappen på mobil, så att pris och reseavgift alltid
  * syns innan kunden skickar. Allt innehåll kommer från src/config/site.ts.
  */
-import { site } from "@/config/site";
+import { paymentMethodsText, site } from "@/config/site";
 import type { priceSummary } from "@/lib/booking";
 import { formatSEK } from "@/lib/format";
 
@@ -19,12 +19,8 @@ export function firstSentence(text: string) {
   return text.split(/(?<=[.!?])\s+/)[0] ?? text;
 }
 
-/** ["Swish", "Kontanter"] → "Swish eller kontanter". */
-export function paymentMethodsText(methods: readonly string[] = site.payment.methods) {
-  const items = methods.map((m, i) => (i === 0 ? m : m.charAt(0).toLowerCase() + m.slice(1)));
-  if (items.length <= 1) return items[0] ?? "";
-  return `${items.slice(0, -1).join(", ")} eller ${items[items.length - 1]}`;
-}
+/** ["Swish", "Kontanter"] → "Swish eller kontanter" (definieras i site.ts). */
+export { paymentMethodsText };
 
 /** Reseavgiften som text för vald zon, eller vad som återstår att välja. */
 export function travelFeeText(price: Price) {
@@ -99,5 +95,40 @@ export function PriceSummary({ price, title = "Din förfrågan" }: { price: Pric
         </li>
       </ul>
     </div>
+  );
+}
+
+/**
+ * Kort prisrad direkt ovanför skicka-knappen på större skärmar, där den fasta
+ * sammanfattningen i sidokolumnen kan hamna delvis under sidhuvudet.
+ */
+export function PriceLine({ price }: { price: Price }) {
+  const { service } = price;
+  return (
+    <dl className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 rounded-xl border border-white/15 bg-ink-850 px-5 py-4 text-sm">
+      <div className="min-w-0">
+        <dt className="text-mist-400">Tjänst</dt>
+        <dd className="font-semibold text-white">
+          {service ? (
+            <>
+              {service.name} <span className="whitespace-nowrap">· {formatSEK(price.base)}</span>
+            </>
+          ) : (
+            "Ingen tjänst vald"
+          )}
+        </dd>
+      </div>
+      <div className="min-w-0">
+        <dt className="text-mist-400">Reseavgift</dt>
+        <dd className="font-semibold text-white">{travelFeeText(price)}</dd>
+      </div>
+      <div className="min-w-0">
+        <dt className="text-mist-400">Preliminärt pris</dt>
+        <dd className="font-display text-xl font-extrabold text-white">
+          {service ? formatSEK(price.total) : "–"}
+          {service && !price.feeKnown && <span className="block text-xs font-semibold text-mist-400">+ reseavgift</span>}
+        </dd>
+      </div>
+    </dl>
   );
 }

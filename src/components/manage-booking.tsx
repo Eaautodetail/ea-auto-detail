@@ -185,7 +185,7 @@ function BookingDetails({ booking, expiresAt }: { booking: ManagedBooking; expir
           </span>
         </Detail>
         <Detail label="E-post">
-          <a href={`mailto:${booking.email}`} className="break-all underline underline-offset-2 hover:text-mist-200">
+          <a href={`mailto:${booking.email}`} className="[overflow-wrap:anywhere] underline underline-offset-2 hover:text-mist-200">
             {booking.email}
           </a>
         </Detail>
@@ -337,7 +337,7 @@ function ConfirmForm({ token, booking }: { token: string; booking: ManagedBookin
         <h3 className="font-display mt-5 text-xl font-extrabold text-white">Bekräftelsen är skickad.</h3>
         <p className="mt-3 text-sm leading-relaxed text-mist-200">
           Mejlet ”Din tid är bekräftad: {status.headline}” har skickats till{" "}
-          <strong className="break-all text-white">{status.sentTo}</strong>.
+          <strong className="text-white [overflow-wrap:anywhere]">{status.sentTo}</strong>.
           {status.copyToBusiness && " En kopia har skickats till er inkorg."}
         </p>
         <button
@@ -454,7 +454,7 @@ function ConfirmForm({ token, booking }: { token: string; booking: ManagedBookin
           {previewOk ? (
             <>
               Kunden får mejlet <strong className="text-white">”Din tid är bekräftad: {formatDate(values.date)} kl. {previewTime}”</strong>{" "}
-              till <span className="break-all text-white">{booking.email}</span>.
+              till <span className="text-white [overflow-wrap:anywhere]">{booking.email}</span>.
             </>
           ) : (
             <>Välj datum och tid för att se vad kunden får.</>
@@ -549,7 +549,7 @@ function Spinner({ dark = false }: { dark?: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={`size-4 shrink-0 animate-spin rounded-full border-2 ${dark ? "border-black/30 border-t-black" : "border-white/30 border-t-white"}`}
+      className={`size-4 shrink-0 motion-safe:animate-spin rounded-full border-2 ${dark ? "border-black/30 border-t-black" : "border-white/30 border-t-white"}`}
     />
   );
 }

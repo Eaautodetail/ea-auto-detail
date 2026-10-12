@@ -19,10 +19,12 @@ const archivo = Archivo({
   display: "swap",
 });
 
+const defaultTitle = `${site.name} – Bilvård & mobil biltvätt i ${site.baseTown}`;
+
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: `${site.name} – Bilvård, biltvätt & mobil bilvård`,
+    default: defaultTitle,
     template: `%s | ${site.name}`,
   },
   description: site.description,
@@ -33,20 +35,22 @@ export const metadata: Metadata = {
     "invändig bilrengöring",
     "utvändig biltvätt",
     "mobil bilvård",
-    "bilrekond",
+    `bilvård ${site.baseTown}`,
+    `biltvätt ${site.baseTown}`,
+    `mobil bilvård ${site.baseTown}`,
     "hämtning och lämning bil",
   ],
   openGraph: {
     type: "website",
     locale: "sv_SE",
     siteName: site.name,
-    title: `${site.name} – Bilvård, biltvätt & mobil bilvård`,
+    title: defaultTitle,
     description: site.description,
     url: "/",
   },
   twitter: {
     card: "summary_large_image",
-    title: `${site.name} – Bilvård, biltvätt & mobil bilvård`,
+    title: defaultTitle,
     description: site.description,
   },
   alternates: { canonical: "/" },

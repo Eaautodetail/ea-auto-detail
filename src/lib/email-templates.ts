@@ -180,7 +180,16 @@ ${body}
 
 /* ---------------------------------------------------------------- hjälp */
 
-const firstName = (name: string) => cleanText(name).split(/\s+/)[0] || cleanText(name);
+/**
+ * Förnamnet för en hälsning ("Tack Anna!"). Används bara om det ser ut som ett namn –
+ * annars hälsar vi utan namn, så att ingen kan lägga in t.ex. länkar i rubriken på
+ * mejl som skickas från företagets adress.
+ */
+const firstName = (name: string) => {
+  const first = cleanText(name).split(/\s+/)[0] ?? "";
+  return /^\p{L}[\p{L}'’-]{0,29}$/u.test(first) ? first : "";
+};
+const greeting = (word: string, name: string) => `${word}${firstName(name) ? ` ${firstName(name)}` : ""}!`;
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const timeText = (time: string) => (time === "Flexibel" ? "flexibel tid" : `kl. ${time}`);
 
@@ -196,7 +205,11 @@ function onSiteBlocks(serviceId: string, arrangementId: string): Block[] {
 }
 
 function paymentBlock(): Block {
-  return { kind: "list", title: "Betalning", items: [`Betalsätt: ${site.payment.methods.join(", ")}`, site.payment.when] };
+  // "Swish eller kontanter" – samma formulering som på webbplatsen.
+  const [first = "", ...rest] = site.payment.methods;
+  const others = rest.map((m) => m.charAt(0).toLowerCase() + m.slice(1));
+  const methods = others.length ? `${[first, ...others.slice(0, -1)].join(", ")} eller ${others[others.length - 1]}` : first;
+  return { kind: "list", title: "Betalning", items: [`Betalsätt: ${methods}`, site.payment.when] };
 }
 
 const customerFooter = (reason: string) =>
@@ -204,22 +217,30 @@ const customerFooter = (reason: string) =>
 
 /* ---------------------------------------------------- till företaget */
 
+/** Vad som händer med det automatiska kvittot till kunden. */
+export type CustomerReceiptStatus = "sending" | "not_configured" | "invalid_address" | "limited";
+
 export function businessNotificationEmail(
   v: BookingFields,
   reference: string,
   photoCount: number,
-  opts: { manageUrl: string | null; customerReceipt: "sending" | "not_configured" | "invalid_address" },
+  opts: { manageUrl: string | null; customerReceipt: CustomerReceiptStatus },
 ): RenderedEmail {
   const { service } = priceSummary(v.service, v.arrangement, v.travelZone);
   const subject = `Bokningsförfrågan ${reference}: ${service?.name ?? v.service} – ${cleanText(v.name).slice(0, 80)}`;
   const summary = bookingAsText(v, reference, photoCount);
 
-  const receiptNote =
-    opts.customerReceipt === "sending"
-      ? "Kunden får ett automatiskt kvitto på att förfrågan har tagits emot. Det står tydligt att tiden INTE är bekräftad än."
-      : opts.customerReceipt === "invalid_address"
-        ? "Kunden har INTE fått något automatiskt kvitto (e-postadressen kunde inte användas). Kontakta kunden via telefon/SMS."
-        : "Kunden har INTE fått något automatiskt mejl – e-post till kunder är inte konfigurerad (se README). Kontakta kunden via telefon/SMS.";
+  // Mejlet skickas INNAN kvittot, så det kan inte lova att kvittot har kommit fram.
+  const receiptNote = {
+    sending:
+      "Systemet skickar nu ett automatiskt kvitto till kunden om att förfrågan har tagits emot (där står det tydligt att tiden INTE är bekräftad än). Går kvittot inte fram får du ett separat mejl om det – kontakta då kunden via telefon/SMS.",
+    invalid_address:
+      "Kunden har INTE fått något automatiskt kvitto (e-postadressen kunde inte användas). Kontakta kunden via telefon/SMS.",
+    limited:
+      "Kunden har INTE fått något automatiskt kvitto – gränsen för automatiska kvitton är nådd för stunden (skydd mot spam). Kontakta kunden via telefon/SMS.",
+    not_configured:
+      "Kunden har INTE fått något automatiskt mejl – e-post till kunder är inte konfigurerad (se README). Kontakta kunden via telefon/SMS.",
+  }[opts.customerReceipt];
 
   const blocks: Block[] = [
     { kind: "heading", text: `Ny bokningsförfrågan ${reference}` },
@@ -254,6 +275,21 @@ export function businessNotificationEmail(
   return { ...rendered, text };
 }
 
+/** Till företaget när kvittot till kunden inte gick att skicka. */
+export function receiptFailedNotice(reference: string): RenderedEmail {
+  const subject = `Kvittot till kunden kunde inte skickas (${reference})`;
+  const text = `Bokningsförfrågan ${reference} har kommit fram till er (se mejlet med samma referens), men det automatiska kvittot till kunden kunde inte skickas. Kunden har alltså inte fått något mejl från oss. Kontakta kunden via telefon/SMS.`;
+  return render(
+    subject,
+    text,
+    [
+      { kind: "heading", text: subject },
+      { kind: "paragraph", text },
+    ],
+    `Skickat automatiskt från bokningsformuläret på ${site.name}s webbplats.`,
+  );
+}
+
 /* ------------------------------------------ kvitto till kunden */
 
 export function customerReceiptEmail(v: BookingFields, reference: string): RenderedEmail {
@@ -281,7 +317,7 @@ export function customerReceiptEmail(v: BookingFields, reference: string): Rende
   rows.push(["Preliminärt pris", feeKnown ? formatSEK(total) : `${formatSEK(total)} + reseavgift (bekräftas)`]);
 
   const blocks: Block[] = [
-    { kind: "heading", text: `Tack ${firstName(v.name)}! Vi har tagit emot din förfrågan.` },
+    { kind: "heading", text: `${greeting("Tack", v.name)} Vi har tagit emot din förfrågan.` },
     {
       kind: "notice",
       tone: "strong",
@@ -339,7 +375,7 @@ export function customerConfirmationEmail(b: BookingTokenData, c: ConfirmedDetai
 
   const message = cleanText(c.message, { multiline: true }).trim();
   const blocks: Block[] = [
-    { kind: "heading", text: `Hej ${firstName(b.name)}! Din tid är bekräftad.` },
+    { kind: "heading", text: `${greeting("Hej", b.name)} Din tid är bekräftad.` },
     {
       kind: "notice",
       tone: "strong",
