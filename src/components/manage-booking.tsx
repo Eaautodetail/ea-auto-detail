@@ -10,7 +10,7 @@
  */
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
-import { site } from "@/config/site";
+import { pricedZones, travelFee, type FeeArrangement } from "@/config/site";
 import { priceSummary, todayInSweden } from "@/lib/booking";
 import { formatDate, formatSEK } from "@/lib/format";
 import {
@@ -156,10 +156,20 @@ export function ManageBooking() {
 
 /* ------------------------------------------------------------ uppgifter */
 
+/**
+ * Reseavgiften för förfrågan: den kunden såg när förfrågan skickades, annars
+ * den som gäller enligt site.ts för upplägg och zon. 0 när kunden lämnar bilen
+ * hos er, `null` när avgiften inte är bestämd ("Vet inte").
+ */
+function bookingFee(booking: ManagedBooking): number | null {
+  return booking.quotedFee ?? travelFee(booking.arrangement, booking.travelZone);
+}
+
 function BookingDetails({ booking, expiresAt }: { booking: ManagedBooking; expiresAt: string }) {
   const { service, arrangement, zone } = priceSummary(booking.service, booking.arrangement, booking.travelZone);
-  const quotedTotal = booking.quotedBase + (booking.quotedFee ?? 0);
-  const feeUnknown = !!arrangement?.feeApplies && booking.quotedFee == null;
+  const fee = bookingFee(booking);
+  const quotedTotal = booking.quotedBase + (fee ?? 0);
+  const feeUnknown = fee == null;
 
   return (
     <section aria-labelledby="forfragan-rubrik" className="min-w-0 rounded-2xl border border-white/15 bg-ink-850 p-6 sm:p-8">
@@ -195,13 +205,13 @@ function BookingDetails({ booking, expiresAt }: { booking: ManagedBooking; expir
         </Detail>
         <Detail label="Upplägg">{arrangement?.label ?? booking.arrangement}</Detail>
         <Detail label="Adress" wide>
-          {booking.location || "–"}
+          {arrangement && !arrangement.feeApplies ? "– (kunden lämnar bilen hos er)" : booking.location || "–"}
         </Detail>
         <Detail label="Reseavgift">
-          {!arrangement?.feeApplies
+          {arrangement && !arrangement.feeApplies
             ? "Ingen"
-            : booking.quotedFee != null
-              ? `${formatSEK(booking.quotedFee)}${zone ? ` · ${zone.label}` : ""}`
+            : fee != null
+              ? `${formatSEK(fee)}${zone ? ` · ${zone.label}` : ""}`
               : `Ej bestämd – kunden valde ”${zone?.label ?? "Vet inte"}”`}
         </Detail>
         <Detail label="Önskad tid">
@@ -284,12 +294,13 @@ function ConfirmForm({ token, booking }: { token: string; booking: ManagedBookin
   const formId = useId();
   const id = (f: string) => `${formId}-${f}`;
   const { arrangement } = priceSummary(booking.service, booking.arrangement, booking.travelZone);
-  const feeUnknown = !!arrangement?.feeApplies && booking.quotedFee == null;
+  const fee = bookingFee(booking);
+  const feeUnknown = fee == null;
 
   const [values, setValues] = useState(() => ({
     date: booking.date,
     time: timeInputValue(booking.time),
-    price: String(booking.quotedBase + (booking.quotedFee ?? 0)),
+    price: String(booking.quotedBase + (fee ?? 0)),
     message: "",
   }));
   const [errors, setErrors] = useState<ConfirmErrors>({});
@@ -403,12 +414,22 @@ function ConfirmForm({ token, booking }: { token: string; booking: ManagedBookin
           label="Totalpris *"
           hint={
             feeUnknown
-              ? `Reseavgiften är inte bestämd – lägg till rätt avgift: ${site.travelZones
-                  .filter((z) => z.fee != null)
-                  .map((z) => `${formatSEK(z.fee!)} (${z.label.charAt(0).toLowerCase()}${z.label.slice(1)})`)
-                  .join(" eller ")}.`
+              ? `Reseavgiften är inte bestämd – lägg till rätt avgift${
+                  arrangement?.feeApplies
+                    ? ` för ${arrangement.label.toLowerCase()}: ${pricedZones
+                        .map(
+                          (z) =>
+                            `${formatSEK(z.fees[arrangement.id as FeeArrangement])} (${z.label.charAt(0).toLowerCase()}${z.label.slice(1)})`,
+                        )
+                        .join(" eller ")}`
+                    : ""
+                }.`
               : `Tjänst ${formatSEK(booking.quotedBase)}${
-                  arrangement?.feeApplies ? ` + reseavgift ${formatSEK(booking.quotedFee ?? 0)}` : ""
+                  arrangement?.feeApplies
+                    ? ` + reseavgift ${formatSEK(fee ?? 0)}`
+                    : arrangement
+                      ? " (ingen reseavgift – kunden lämnar bilen hos er)"
+                      : ""
                 }. Ändra bara om kunden har godkänt något annat, t.ex. extra arbete.`
           }
           error={errors.price}

@@ -2,7 +2,16 @@
  * Gemensam validering för bokningsförfrågan. Används både i formuläret
  * (direkt feedback) och i API-routen (servern litar aldrig på klienten).
  */
-import { bookingTimes, currentHours, getArrangement, getService, getTravelZone, latestStartTime } from "@/config/site";
+import {
+  arrangementNeedsLocation,
+  bookingTimes,
+  currentHours,
+  getArrangement,
+  getService,
+  getTravelZone,
+  latestStartTime,
+  travelFee,
+} from "@/config/site";
 
 export const PHOTO_LIMITS = {
   maxFiles: 5,
@@ -24,7 +33,7 @@ export type BookingFields = {
   /** Önskad starttid, t.ex. "10.00" eller "Flexibel" (se `bookingTimes()`). */
   time: string;
   arrangement: string;
-  /** Adress där bilen står (mobil bilvård) eller ska hämtas (hämtning och lämning). */
+  /** Adress där bilen står (mobil bilvård) eller ska hämtas (hämtning och lämning). Tom när kunden lämnar bilen hos oss. */
   location: string;
   travelZone: string;
   message: string;
@@ -60,9 +69,17 @@ function addDays(iso: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-/** Adress behövs för båda uppläggen (vi kommer till kunden eller hämtar bilen). */
+/**
+ * Adress och avstånd behövs när vi åker till kunden (mobil bilvård, hämtning och
+ * lämning) men inte när kunden lämnar bilen hos oss.
+ */
 export function locationRequired(arrangement: string) {
-  return !!getArrangement(arrangement);
+  return arrangementNeedsLocation(arrangement);
+}
+
+/** Tömmer adress och avstånd när de inte används (kunden lämnar bilen hos oss). */
+export function dropUnusedLocation(v: BookingFields): BookingFields {
+  return locationRequired(v.arrangement) ? v : { ...v, location: "", travelZone: "" };
 }
 
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -109,7 +126,7 @@ export function validateField(field: BookingField, v: BookingFields, today: stri
       return "Välj en önskad tid.";
     }
     case "arrangement":
-      if (!getArrangement(value)) return "Välj mobil bilvård eller hämtning och lämning.";
+      if (!getArrangement(value)) return "Välj var vi ska ta hand om bilen.";
       return;
     case "location":
       if (locationRequired(v.arrangement) && value.length < 5) return "Skriv adressen där bilen står, t.ex. Storgatan 1, Kristianstad.";
@@ -185,21 +202,23 @@ export function validatePhotos(files: { size: number; type: string }[]): string 
 
 /**
  * Prisöversikt för vald tjänst, upplägg och resezon.
- * `feeKnown` är `false` när reseavgiften inte kan räknas ut ännu (zon ej vald,
- * "vet inte" eller annat upplägg) – då bekräftar vi den manuellt.
+ * `feeKnown` är `false` när reseavgiften inte kan räknas ut ännu (upplägg eller
+ * zon ej vald, eller "vet inte") – då bekräftar vi den manuellt. När kunden
+ * lämnar bilen hos oss är avgiften 0 och ingen zon används.
  */
 export function priceSummary(serviceId: string, arrangementId: string, travelZoneId = "") {
   const service = getService(serviceId);
   const arrangement = getArrangement(arrangementId);
   const zone = arrangement?.feeApplies ? getTravelZone(travelZoneId) : undefined;
-  const fee = zone?.fee ?? 0;
+  const knownFee = travelFee(arrangementId, travelZoneId);
+  const fee = knownFee ?? 0;
   return {
     service,
     arrangement,
     zone,
     base: service?.price ?? 0,
     fee,
-    feeKnown: !!arrangement && (!arrangement.feeApplies || zone?.fee != null),
+    feeKnown: knownFee != null,
     total: (service?.price ?? 0) + fee,
   };
 }
@@ -218,8 +237,12 @@ export function bookingAsText(v: BookingFields, reference: string, photoCount: n
     `Bil: ${v.vehicle}`,
     `Tjänst: ${service?.name ?? v.service} (${kr(base)})`,
     `Upplägg: ${arrangement?.label ?? v.arrangement}`,
-    `Adress: ${v.location || "–"}`,
-    `Reseavgift: ${zone ? zone.label : "–"}${fee ? ` (+${kr(fee)})` : " – bekräfta utifrån adressen"}`,
+    `Adress: ${arrangement?.feeApplies === false ? "– (kunden lämnar bilen hos oss)" : v.location || "–"}`,
+    `Reseavgift: ${
+      arrangement?.feeApplies === false
+        ? "Ingen (kunden lämnar bilen hos oss)"
+        : `${zone ? zone.label : "–"}${feeKnown ? ` (+${kr(fee)})` : " – bekräfta utifrån adressen"}`
+    }`,
     `Önskad dag: ${v.date}, ${v.time === "Flexibel" ? "flexibel tid" : `kl. ${v.time}`}`,
     `Preliminärt pris: ${kr(total)}${feeKnown ? "" : " + reseavgift (bekräftas)"}`,
     `Bifogade bilder: ${photoCount}`,

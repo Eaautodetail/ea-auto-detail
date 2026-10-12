@@ -19,6 +19,7 @@
 import {
   bookingAsText,
   detectImageType,
+  dropUnusedLocation,
   emptyBooking,
   priceSummary,
   todayInSweden,
@@ -86,7 +87,7 @@ async function notifyBusinessByEmail(
 }
 
 async function notifyWebhook(fields: BookingFields, text: string, reference: string, photos: Photo[]) {
-  const { service, arrangement, zone, base, feeKnown, total } = priceSummary(
+  const { service, arrangement, zone, base, fee, feeKnown, total } = priceSummary(
     fields.service,
     fields.arrangement,
     fields.travelZone,
@@ -108,9 +109,11 @@ async function notifyWebhook(fields: BookingFields, text: string, reference: str
       service: { id: service?.id ?? fields.service, name: service?.name ?? null, price: base },
       arrangement: { id: arrangement?.id ?? fields.arrangement, label: arrangement?.label ?? null },
       address: fields.location || null,
+      // `null` när kunden lämnar bilen hos oss (ingen reseavgift).
       travel: arrangement?.feeApplies
-        ? { zone: zone?.id ?? null, label: zone?.label ?? null, fee: zone?.fee ?? null }
+        ? { zone: zone?.id ?? null, label: zone?.label ?? null, fee: feeKnown ? fee : null }
         : null,
+      travelFee: feeKnown ? fee : null,
       preferredDate: fields.date,
       preferredTime: fields.time,
       estimatedTotal: total,
@@ -142,11 +145,13 @@ export async function POST(request: Request) {
     return json({ ok: false, code: "rejected", message: "Förfrågan kunde inte skickas." }, 400);
   }
 
-  const fields = { ...emptyBooking };
+  const raw = { ...emptyBooking };
   for (const key of Object.keys(emptyBooking) as (keyof BookingFields)[]) {
     const value = form.get(key);
-    fields[key] = typeof value === "string" ? value.trim() : "";
+    raw[key] = typeof value === "string" ? value.trim() : "";
   }
+  // Adress och avstånd sparas bara när vi åker till kunden.
+  const fields = dropUnusedLocation(raw);
 
   const errors = validateBooking(fields, todayInSweden());
   const files = form.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
@@ -201,7 +206,7 @@ export async function POST(request: Request) {
         : "sending";
 
   // Krypterad länk så att företaget kan bekräfta tiden från /hantera (ingen databas behövs).
-  const { base, zone, arrangement } = priceSummary(fields.service, fields.arrangement, fields.travelZone);
+  const { base, fee, feeKnown } = priceSummary(fields.service, fields.arrangement, fields.travelZone);
   const token = sealBookingToken({
     reference,
     name: fields.name,
@@ -215,7 +220,7 @@ export async function POST(request: Request) {
     date: fields.date,
     time: fields.time,
     quotedBase: base,
-    quotedFee: arrangement?.feeApplies ? (zone?.fee ?? null) : 0,
+    quotedFee: feeKnown ? fee : null,
   });
   const manageUrl = token ? manageBookingUrl(publicOrigin(request), token) : null;
 

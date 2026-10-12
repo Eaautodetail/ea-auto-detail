@@ -17,11 +17,18 @@ import { formatSEK } from "@/lib/format";
 /** Priser i hela kronor (SEK). Ändra här så uppdateras hela sajten. */
 const PRICE = { exterior: 149, interior: 249, complete: 349 } as const;
 
-/** Reseavgift i SEK när vi åker till kunden eller hämtar och lämnar bilen. */
-const TRAVEL_FEE = { near: 150, far: 250 } as const;
+/**
+ * Reseavgift i SEK per upplägg och avstånd. `near` = inom ca TRAVEL_KM.near km
+ * från Kristianstad, `far` = mellan TRAVEL_KM.near och TRAVEL_KM.max km.
+ * "Lämna bilen hos oss" (dropoff) är gratis och finns därför inte här.
+ */
+const TRAVEL_FEE = {
+  visit: { near: 150, far: 250 },
+  pickup: { near: 250, far: 350 },
+} as const;
 
 /** Hur långt vi åker, i km från Kristianstad. */
-const TRAVEL_KM = { near: 5, max: 20 } as const;
+const TRAVEL_KM = { near: 5, max: 15 } as const;
 
 /** Arbetstider per säsong. Byt `currentSeason` längre ned när säsongen skiftar. */
 const SEASONS = {
@@ -54,14 +61,27 @@ export type Service = {
   highlighted?: boolean;
 };
 
-export type Arrangement = "visit" | "pickup";
+export type Arrangement = "visit" | "pickup" | "dropoff";
+
+/** Upplägg där en reseavgift tillkommer (vi åker till kunden). */
+export type FeeArrangement = keyof typeof TRAVEL_FEE;
 
 export type TravelZone = {
   id: string;
   label: string;
+  /** Kort etikett för tabellrubriker, t.ex. "Inom ca 5 km". */
+  shortLabel: string;
   description: string;
-  /** `null` = avgiften bekräftas manuellt utifrån adressen. */
-  fee: number | null;
+  /** Reseavgift per upplägg. `null` = avgiften bekräftas manuellt utifrån adressen. */
+  fees: Record<FeeArrangement, number> | null;
+};
+
+export type ArrangementInfo = {
+  id: Arrangement;
+  label: string;
+  description: string;
+  /** `true` = reseavgift tillkommer och kunden anger adress och avstånd. */
+  feeApplies: boolean;
 };
 
 export type GalleryItem = {
@@ -125,7 +145,7 @@ export const site = {
     phoneHref: "+46723504805" as string | null,
     email: "eaautodetail2026@gmail.com" as string | null,
     /** Område vi utgår från / åker till. */
-    serviceArea: `Kristianstad med omnejd, upp till ca ${TRAVEL_KM.max} km (t.ex. Åhus)` as string | null,
+    serviceArea: `Kristianstad med omnejd, upp till ca ${TRAVEL_KM.max} km` as string | null,
   },
 
   /** Svarstid – visas vid bokningen, på kontaktsidan och i kvittomejlet. */
@@ -157,33 +177,38 @@ export const site = {
   baseTown: "Kristianstad",
 
   /**
-   * Reseavgift som tillkommer vid mobil bilvård och vid hämtning och lämning.
-   * Kunden väljer zon i bokningen och vi bekräftar avgiften utifrån adressen.
+   * Reseavgift som tillkommer vid mobil bilvård och vid hämtning och lämning
+   * (beloppen per upplägg står i TRAVEL_FEE överst i filen). Kunden väljer zon
+   * i bokningen och vi bekräftar avgiften utifrån adressen. När kunden lämnar
+   * bilen hos oss behövs ingen zon och ingen reseavgift.
    */
   travelZones: [
     {
       id: "near",
       label: `Inom ca ${TRAVEL_KM.near} km från Kristianstad`,
+      shortLabel: `Inom ca ${TRAVEL_KM.near} km`,
       description: "Kristianstad med närområde.",
-      fee: TRAVEL_FEE.near,
+      fees: { visit: TRAVEL_FEE.visit.near, pickup: TRAVEL_FEE.pickup.near },
     },
     {
       id: "far",
       label: `${TRAVEL_KM.near}–${TRAVEL_KM.max} km från Kristianstad`,
-      description: "T.ex. Åhus.",
-      fee: TRAVEL_FEE.far,
+      shortLabel: `${TRAVEL_KM.near}–${TRAVEL_KM.max} km`,
+      description: `Upp till ca ${TRAVEL_KM.max} km från Kristianstad.`,
+      fees: { visit: TRAVEL_FEE.visit.far, pickup: TRAVEL_FEE.pickup.far },
     },
     {
       id: "unsure",
       label: "Vet inte",
+      shortLabel: "Vet inte",
       description: "Vi kollar adressen och bekräftar avgiften.",
-      fee: null,
+      fees: null,
     },
   ] satisfies TravelZone[] as TravelZone[],
 
-  /** Lägsta reseavgiften, för texter som "från 150 kr". */
-  travelFeeFrom: TRAVEL_FEE.near,
+  /** Hur långt vi åker (km från Kristianstad) och gränsen för närzonen. */
   travelMaxKm: TRAVEL_KM.max,
+  travelNearKm: TRAVEL_KM.near,
 
   services: [
     {
@@ -261,13 +286,25 @@ export const site = {
       description: "Vi hämtar bilen, gör jobbet hos oss och lämnar tillbaka den.",
       feeApplies: true,
     },
-  ] satisfies { id: Arrangement; label: string; description: string; feeApplies: boolean }[],
+    {
+      id: "dropoff",
+      label: "Lämna bilen hos oss",
+      description: "Du lämnar bilen hos oss och hämtar den när den är klar.",
+      feeApplies: false,
+    },
+  ] satisfies ArrangementInfo[] as ArrangementInfo[],
 
   /** Krav vid mobil bilvård, utöver el/vatten som beror på tjänst (se `onSiteNeeds`). */
   onSite: {
     parking: "En lämplig parkeringsplats där bilen kan stå och där vi får plats att arbeta.",
     mat: "Vi lägger en miljömatta under bilen som samlar upp tvättvattnet.",
     pickupNote: "Vid hämtning och lämning gör vi jobbet hos oss – du behöver inte ordna vatten, el eller tvättplats.",
+    dropoffNote: "När du lämnar bilen hos oss gör vi jobbet hos oss – du behöver inte ordna vatten, el eller tvättplats.",
+    /** Vi har ingen publik adress i den här filen – den skickas när vi bekräftar. */
+    dropoffHandover: "Adress och tid för lämning och hämtning får du när vi bekräftar bokningen.",
+    /** Visas vid mobil bilvård för den som saknar vatten, el eller plats. */
+    atOurPlaceNote:
+      "Välj hämtning och lämning eller lämna bilen hos oss – då gör vi jobbet hos oss och du behöver inte ordna vatten, el eller tvättplats.",
   },
 
   /**
@@ -370,6 +407,58 @@ export function getTravelZone(id: string | null | undefined) {
 
 export function getArrangement(id: string | null | undefined) {
   return site.arrangements.find((a) => a.id === id);
+}
+
+/** Upplägg med reseavgift (mobil bilvård, hämtning och lämning). */
+export const feeArrangements = site.arrangements.filter(
+  (a): a is ArrangementInfo & { id: FeeArrangement } => a.feeApplies && a.id in TRAVEL_FEE,
+);
+
+/** Zoner med fast avgift ("Inom ca 5 km", "5–15 km"). */
+export const pricedZones = site.travelZones.filter(
+  (z): z is TravelZone & { fees: Record<FeeArrangement, number> } => z.fees != null,
+);
+
+/**
+ * Reseavgiften i kronor för ett upplägg och en zon.
+ * 0 = ingen reseavgift (t.ex. när kunden lämnar bilen hos oss).
+ * `null` = kan inte räknas ut än (zon ej vald eller "Vet inte") – bekräftas manuellt.
+ */
+export function travelFee(arrangementId: string | null | undefined, zoneId: string | null | undefined): number | null {
+  const arrangement = getArrangement(arrangementId);
+  if (!arrangement) return null;
+  if (!arrangement.feeApplies) return 0;
+  const fees = getTravelZone(zoneId)?.fees;
+  return fees ? fees[arrangement.id as FeeArrangement] : null;
+}
+
+/** Lägsta reseavgiften för ett upplägg, t.ex. 150 för mobil bilvård och 0 för "Lämna bilen hos oss". */
+export function travelFeeFrom(arrangementId: string | null | undefined): number {
+  const arrangement = getArrangement(arrangementId);
+  if (!arrangement?.feeApplies) return 0;
+  return Math.min(...pricedZones.map((z) => z.fees[arrangement.id as FeeArrangement]));
+}
+
+/** "Reseavgift från 150 kr" eller "Gratis – ingen reseavgift". */
+export function travelFeeFromText(arrangementId: string | null | undefined): string {
+  const from = travelFeeFrom(arrangementId);
+  return from > 0 ? `Reseavgift från ${formatSEK(from)}` : "Gratis – ingen reseavgift";
+}
+
+/** Adress och avstånd behövs bara när vi åker till kunden (mobil bilvård, hämtning och lämning). */
+export function arrangementNeedsLocation(arrangementId: string | null | undefined): boolean {
+  return !!getArrangement(arrangementId)?.feeApplies;
+}
+
+/** "150 kr inom ca 5 km från Kristianstad och 250 kr för 5–15 km" för ett upplägg. */
+export function zoneFeesText(arrangementId: FeeArrangement): string {
+  return listText(
+    pricedZones.map((z, i) =>
+      i === 0
+        ? `${formatSEK(z.fees[arrangementId])} ${lowerFirst(z.label)}`
+        : `${formatSEK(z.fees[arrangementId])} för ${z.shortLabel}`,
+    ),
+  );
 }
 
 /** Aktuella arbetstider, t.ex. { label: "Vinterhalvåret", open: "09.00", close: "18.00", text: "09.00–18.00" }. */
@@ -477,7 +566,7 @@ export const navigation = [
  */
 function buildFaq(): Faq[] {
   const { services, onSite, contact } = site;
-  const zonesText = `${formatSEK(TRAVEL_FEE.near)} inom ca ${TRAVEL_KM.near} km från ${site.baseTown} och ${formatSEK(TRAVEL_FEE.far)} upp till ${TRAVEL_KM.max} km`;
+  const dropoff = getArrangement("dropoff");
 
   const timed = services.filter((s) => s.duration);
 
@@ -513,7 +602,7 @@ function buildFaq(): Faq[] {
     {
       id: "mobil-service",
       question: "Hur fungerar mobil bilvård?",
-      answer: `${getArrangement("visit")?.description ?? ""} Då tillkommer en reseavgift: ${zonesText} (t.ex. Åhus). Skriv adressen i bokningsförfrågan så bekräftar vi avgiften.`.trim(),
+      answer: `${getArrangement("visit")?.description ?? ""} Då tillkommer en reseavgift: ${zoneFeesText("visit")}. Skriv adressen i bokningsförfrågan så bekräftar vi avgiften.`.trim(),
     },
     {
       id: "mobil-krav",
@@ -522,14 +611,23 @@ function buildFaq(): Faq[] {
         ...Array.from(byNeed, ([need, names]) => `För ${listText(names)} behöver vi ${lowerFirst(need)}.`),
         `Vi behöver också ${lowerFirst(onSite.parking)}`,
         onSite.mat,
-        onSite.pickupNote,
+        `Saknar du något av detta? ${onSite.atOurPlaceNote}`,
       ].join(" "),
     },
     {
       id: "hamtning",
       question: "Hur fungerar hämtning och lämning?",
-      answer: `${getArrangement("pickup")?.description ?? ""} Du behöver inte ordna vatten, el eller tvättplats. Samma reseavgift gäller som vid mobil bilvård: ${zonesText}. Tider och nyckelöverlämning bestämmer vi när vi bekräftar bokningen.`.trim(),
+      answer: `${getArrangement("pickup")?.description ?? ""} Du behöver inte ordna vatten, el eller tvättplats. Reseavgiften är ${zoneFeesText("pickup")}. Tider och nyckelöverlämning bestämmer vi när vi bekräftar bokningen.`.trim(),
     },
+    ...(dropoff
+      ? [
+          {
+            id: "lamna-bilen",
+            question: "Kan jag lämna bilen hos er?",
+            answer: `Ja. ${dropoff.description} Det kostar ingen reseavgift och du behöver inte ordna vatten, el eller tvättplats. ${onSite.dropoffHandover}`,
+          },
+        ]
+      : []),
     {
       id: "extra-smutsig",
       question: "Vad händer om bilen är extra smutsig?",
@@ -538,7 +636,7 @@ function buildFaq(): Faq[] {
     {
       id: "boka",
       question: "Hur bokar jag?",
-      answer: `Fyll i bokningsförfrågan här på sidan. Välj tjänst, dag och tid och om vi ska komma till dig eller hämta bilen. En förfrågan är inte en bekräftad bokning – vi bekräftar tid och pris innan bokningen gäller. ${site.responseTime}`,
+      answer: `Fyll i bokningsförfrågan här på sidan. Välj tjänst, dag och tid och om vi ska komma till dig, hämta bilen eller om du lämnar den hos oss. En förfrågan är inte en bekräftad bokning – vi bekräftar tid och pris innan bokningen gäller. ${site.responseTime}`,
     },
     {
       id: "betalning",
@@ -563,7 +661,7 @@ function buildFaq(): Faq[] {
     {
       id: "omrade",
       question: "Vilka områden åker ni till?",
-      answer: `Vi utgår från ${site.baseTown} och åker upp till ca ${TRAVEL_KM.max} km därifrån, t.ex. till Åhus. Inom ca ${TRAVEL_KM.near} km är reseavgiften ${formatSEK(TRAVEL_FEE.near)} och mellan ${TRAVEL_KM.near} och ${TRAVEL_KM.max} km ${formatSEK(TRAVEL_FEE.far)}.`,
+      answer: `Vi utgår från ${site.baseTown} och åker upp till ca ${TRAVEL_KM.max} km därifrån. Reseavgiften vid mobil bilvård är ${zoneFeesText("visit")}. Vid hämtning och lämning är den ${zoneFeesText("pickup")}. Lämnar du bilen hos oss tillkommer ingen reseavgift.`,
     },
   ];
 }
