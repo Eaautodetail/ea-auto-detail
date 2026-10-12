@@ -16,7 +16,7 @@ import { formatSEK } from "@/lib/format";
 /** Priser i hela kronor (SEK). Ändra här så uppdateras hela sajten. */
 const PRICE = { exterior: 149, interior: 249, complete: 349 } as const;
 /** Reseavgift i SEK när vi åker till kunden eller hämtar och lämnar bilen. */
-const TRAVEL_FEE = { near: 150, ahus: 250 } as const;
+const TRAVEL_FEE = { near: 150, far: 250 } as const;
 
 export type ServiceId = "exterior" | "interior" | "complete";
 
@@ -101,7 +101,7 @@ export const site = {
     phoneHref: "+46723504805" as string | null,
     email: "eaautodetail2026@gmail.com" as string | null,
     /** Område vi utgår från / åker till, t.ex. "Västerås med omnejd". */
-    serviceArea: "Kristianstad med omnejd, upp till Åhus" as string | null,
+    serviceArea: "Kristianstad med omnejd, upp till ca 20 km" as string | null,
     /** Svarstider eller tider vi tar emot bokningar, t.ex. "Vardagar 16–20". */
     availability: null as string | null,
   },
@@ -128,10 +128,10 @@ export const site = {
       fee: TRAVEL_FEE.near,
     },
     {
-      id: "ahus",
-      label: "Längre än 5 km, upp till Åhus",
-      description: "Mellan ca 5 km från Kristianstad och Åhus.",
-      fee: TRAVEL_FEE.ahus,
+      id: "far",
+      label: "5–20 km från Kristianstad",
+      description: "Längre än ca 5 km, men högst 20 km bort.",
+      fee: TRAVEL_FEE.far,
     },
     {
       id: "unsure",
@@ -277,7 +277,7 @@ export const site = {
       id: "mobil-service",
       question: "Hur fungerar mobil service?",
       answer:
-        `Vi kommer till dig och tvättar bilen där den står. Då tillkommer en reseavgift: ${formatSEK(TRAVEL_FEE.near)} inom ca 5 km från Kristianstad och ${formatSEK(TRAVEL_FEE.ahus)} längre bort, upp till Åhus. Skriv adressen i bokningsförfrågan så bekräftar vi avgiften.`,
+        `Vi kommer till dig och tvättar bilen där den står. Då tillkommer en reseavgift: ${formatSEK(TRAVEL_FEE.near)} inom ca 5 km från Kristianstad och ${formatSEK(TRAVEL_FEE.far)} upp till 20 km bort. Skriv adressen i bokningsförfrågan så bekräftar vi avgiften.`,
     },
     {
       id: "mobil-krav",
@@ -289,7 +289,7 @@ export const site = {
       id: "hamtning",
       question: "Hur fungerar hämtning och lämning?",
       answer:
-        `Om det passar dig bättre hämtar vi bilen, gör jobbet hos oss och lämnar tillbaka den när den är klar. Samma reseavgift gäller som vid mobil bilvård: ${formatSEK(TRAVEL_FEE.near)} inom ca 5 km från Kristianstad och ${formatSEK(TRAVEL_FEE.ahus)} upp till Åhus. Tider och nyckelöverlämning bestämmer vi när vi bekräftar bokningen.`,
+        `Om det passar dig bättre hämtar vi bilen, gör jobbet hos oss och lämnar tillbaka den när den är klar. Samma reseavgift gäller som vid mobil bilvård: ${formatSEK(TRAVEL_FEE.near)} inom ca 5 km från Kristianstad och ${formatSEK(TRAVEL_FEE.far)} upp till 20 km bort. Tider och nyckelöverlämning bestämmer vi när vi bekräftar bokningen.`,
     },
     {
       id: "extra-smutsig",
@@ -319,7 +319,7 @@ export const site = {
       id: "omrade",
       question: "Vilka områden åker ni till?",
       answer:
-        `Vi utgår från Kristianstad och åker upp till Åhus. Inom ca 5 km från Kristianstad är reseavgiften ${formatSEK(TRAVEL_FEE.near)} och längre bort, upp till Åhus, ${formatSEK(TRAVEL_FEE.ahus)}.`,
+        `Vi utgår från Kristianstad och åker upp till ca 20 km därifrån. Inom ca 5 km är reseavgiften ${formatSEK(TRAVEL_FEE.near)} och mellan 5 och 20 km ${formatSEK(TRAVEL_FEE.far)}.`,
     },
   ] satisfies Faq[] as Faq[],
 };

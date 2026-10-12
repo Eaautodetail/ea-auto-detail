@@ -44,7 +44,7 @@ export default function ServicesPage() {
               <tr>
                 <th scope="col" className="px-5 py-4 font-semibold">Tjänst</th>
                 <th scope="col" className="px-5 py-4 font-semibold">Grundpris</th>
-                <th scope="col" className="hidden px-5 py-4 font-semibold sm:table-cell">Med reseavgift (inom 5 km / upp till Åhus)</th>
+                <th scope="col" className="hidden px-5 py-4 font-semibold sm:table-cell">Med reseavgift (inom 5 km / 5–20 km)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10 bg-ink-850">

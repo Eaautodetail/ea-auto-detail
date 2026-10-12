@@ -18,7 +18,7 @@ export function GET() {
     "## Villkor",
     `- Reseavgift när vi åker till kunden eller hämtar och lämnar bilen: ${site.travelZones
       .filter((z) => z.fee != null)
-      .map((z) => `${formatSEK(z.fee!)} (${z.label.toLowerCase()})`)
+      .map((z) => `${formatSEK(z.fee!)} (${z.label.charAt(0).toLowerCase()}${z.label.slice(1)})`)
       .join(", ")}.`,
     "- Extra smutsiga bilar eller extra arbete kan kosta mer. Kunden får ett prisförslag och måste godkänna det innan extraarbetet påbörjas.",
     "- Bokningar görs som förfrågan via webbplatsen och gäller först när EA Auto Detail har bekräftat tid och pris.",
