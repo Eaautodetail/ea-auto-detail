@@ -76,14 +76,17 @@ export function PriceSummary({ price, title = "Din förfrågan" }: { price: Pric
 
       <ul className="mt-4 space-y-2 border-t border-white/10 pt-4 text-xs leading-relaxed text-mist-400">
         <li>
-          <span className="font-semibold text-mist-200">Reseavgift</span> tillkommer utöver priset för tjänsten
-          {arrangement?.feeApplies ? ` (${arrangement.label.toLowerCase()})` : ""}:
           {arrangement && !arrangement.feeApplies ? (
-            <span className="mt-1 flex justify-between gap-3">
-              <span className="min-w-0">{arrangement.label}</span>
-              <span className="shrink-0 font-semibold text-mist-200">Gratis</span>
-            </span>
-          ) : arrangement ? (
+            <>
+              <span className="font-semibold text-mist-200">Reseavgift</span> tillkommer inte när du lämnar bilen hos oss.
+            </>
+          ) : (
+            <>
+              <span className="font-semibold text-mist-200">Reseavgift</span> tillkommer utöver priset för tjänsten
+              {arrangement ? ` (${arrangement.label.toLowerCase()})` : ""}:
+            </>
+          )}
+          {arrangement && !arrangement.feeApplies ? null : arrangement ? (
             <ul className="mt-1 space-y-0.5">
               {pricedZones.map((z) => (
                 <li key={z.id} className="flex justify-between gap-3">

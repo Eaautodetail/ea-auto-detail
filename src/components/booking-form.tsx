@@ -881,7 +881,7 @@ function ArrangementInfo({ arrangement, service }: { arrangement: string; servic
         <ul className="mt-2 space-y-2 text-sm text-mist-200">
           <li className="flex items-start gap-2">
             <CheckIcon className="mt-0.5 size-4 shrink-0 text-white" />
-            Ingen reseavgift – du betalar bara för tjänsten.
+            Ingen reseavgift tillkommer.
           </li>
           <li className="flex items-start gap-2">
             <CheckIcon className="mt-0.5 size-4 shrink-0 text-white" />
