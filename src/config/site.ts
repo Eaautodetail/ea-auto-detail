@@ -280,8 +280,8 @@ export const site = {
      * om ni vill visa era förnamn under bilderna.
      */
     founders: [
-      { src: "/about/grundare-1.jpg", alt: "En av grundarna till EA Auto Detail, i randig fotbollströja.", name: null },
-      { src: "/about/grundare-2.jpg", alt: "Den andra grundaren till EA Auto Detail, i blå fotbollströja.", name: null },
+      { src: "/about/grundare-1.jpg", alt: "Albin Seferi, en av grundarna till EA Auto Detail.", name: "Albin Seferi" },
+      { src: "/about/grundare-2.jpg", alt: "Erjon Hasi, en av grundarna till EA Auto Detail.", name: "Erjon Hasi" },
     ] as { src: string; alt: string; name: string | null }[],
     story: [
       `${NAME} drivs av oss två – unga entreprenörer som går på Söderportgymnasiet och som delar samma intresse: bilar, och känslan när en bil verkligen är ren. Ur det intresset växte idén att starta något eget. Vi bygger företaget från grunden, vid sidan av studierna, och gör allt arbete själva.`,
