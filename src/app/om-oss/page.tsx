@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { currentHours, site } from "@/config/site";
+import { site } from "@/config/site";
 import { PageHero, CtaBand, WhyUs } from "@/components/blocks";
 import { Placeholder, Section, SectionHeading } from "@/components/ui";
 import { SocialLinks } from "@/components/social-links";
@@ -18,7 +18,6 @@ export const metadata: Metadata = {
 const aboutImage = (site as { aboutImage?: { src: string; alt: string } | null }).aboutImage ?? null;
 
 export default function AboutPage() {
-  const hours = currentHours();
   return (
     <>
       <PageHero
@@ -37,11 +36,6 @@ export default function AboutPage() {
             {site.about.story.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
-            <p>
-              Vi utgår från {site.baseTown} och jobbar {site.hours.days.toLowerCase()} i veckan ({hours.text} just nu).
-              Antingen kommer vi till dig och tvättar bilen där den står, eller så hämtar vi bilen, gör jobbet hos oss
-              och lämnar tillbaka den.
-            </p>
             {site.showPlaceholders && (
               <Placeholder>
                 Lägg gärna till era förnamn, hur ni träffades och sedan när ni driver företaget.

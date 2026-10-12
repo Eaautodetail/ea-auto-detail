@@ -106,7 +106,7 @@ export const site = {
       : "http://localhost:3000"),
   locale: "sv-SE",
   currency: "SEK",
-  showPlaceholders: true,
+  showPlaceholders: false,
 
   tagline: "Noggrann bilvård – hos dig eller hos oss",
   description:
@@ -276,9 +276,11 @@ export const site = {
    */
   about: {
     story: [
-      "Vi är två unga entreprenörer som gillar bilar – hur de ser ut, hur de känns och hur skönt det är att sätta sig i en bil som är riktigt ren. Av det intresset växte idén om att starta ett eget bilvårdsföretag.",
-      `Med ${NAME} vill vi erbjuda bilvård som är noggrann men inte dyr, oavsett om det är familjens vardagsbil eller en bil man har lagt ner sin själ i.`,
-      "Vi är ett litet företag och bygger det steg för steg, ett jobb i taget. Är du nöjd blir vi glada om du berättar det för någon du känner eller taggar oss i sociala medier.",
+      `${NAME} drivs av oss två – unga entreprenörer som går på Söderportgymnasiet och som delar samma intresse: bilar, och känslan när en bil verkligen är ren. Ur det intresset växte idén att starta något eget. Vi bygger företaget från grunden, vid sidan av studierna, och gör allt arbete själva.`,
+      "Hos oss pratar du direkt med dem som tar hand om din bil. Vi är inget stort, opersonligt företag – bara vi två och ett jobb som vi vill att du ska bli nöjd med. Vi är noggranna med detaljerna och anpassar arbetet efter bilens skick och vad du behöver. Skillnaden mellan före och efter ska märkas på riktigt.",
+      "Vi vill göra bilvård enkel. Därför kommer vi till dig och tvättar bilen där den står, eller hämtar den och lämnar tillbaka den när den är klar. Du slipper åka till en biltvätt och lägga din egen tid och energi på jobbet.",
+      "Vi lär oss hela tiden. Vi testar nya arbetssätt, satsar på bättre utrustning och bygger ut det vi erbjuder i takt med att vi kan mer. Vi lovar hellre lite och gör ett ordentligt jobb än tvärtom – och vi säger aldrig att vi gör något som vi ännu inte kan göra bra.",
+      "Vi vill växa genom bra resultat och nöjda kunder, inte genom stora ord. Därför visar vi vårt arbete med före- och efterbilder och klipp på TikTok, Instagram och Facebook. Ta gärna en titt – och blir du nöjd blir vi glada om du berättar om oss för någon du känner.",
     ] as string[],
   },
 
