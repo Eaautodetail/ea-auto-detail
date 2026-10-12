@@ -2,7 +2,7 @@
  * Gemensam validering för bokningsförfrågan. Används både i formuläret
  * (direkt feedback) och i API-routen (servern litar aldrig på klienten).
  */
-import { getArrangement, getService, getTravelZone, site } from "@/config/site";
+import { bookingTimes, getArrangement, getService, getTravelZone } from "@/config/site";
 
 export const PHOTO_LIMITS = {
   maxFiles: 5,
@@ -15,13 +15,16 @@ export const PHOTO_LIMITS = {
 
 export type BookingFields = {
   name: string;
-  contactMethod: string;
-  contactValue: string;
+  phone: string;
+  email: string;
+  /** Registreringsnummer eller bilmodell. */
   vehicle: string;
   service: string;
   date: string;
-  timeWindow: string;
+  /** Önskad starttid, t.ex. "10.00" eller "Flexibel" (se `bookingTimes()`). */
+  time: string;
   arrangement: string;
+  /** Adress där bilen står (mobil bilvård) eller ska hämtas (hämtning och lämning). */
   location: string;
   travelZone: string;
   message: string;
@@ -33,12 +36,12 @@ export type BookingErrors = Partial<Record<BookingField | "photos", string>>;
 
 export const emptyBooking: BookingFields = {
   name: "",
-  contactMethod: "phone",
-  contactValue: "",
+  phone: "",
+  email: "",
   vehicle: "",
   service: "",
   date: "",
-  timeWindow: "",
+  time: "",
   arrangement: "",
   location: "",
   travelZone: "",
@@ -57,9 +60,12 @@ function addDays(iso: string, days: number) {
   return date.toISOString().slice(0, 10);
 }
 
+/** Adress behövs för båda uppläggen (vi kommer till kunden eller hämtar bilen). */
 export function locationRequired(arrangement: string) {
-  return arrangement === "visit" || arrangement === "pickup";
+  return !!getArrangement(arrangement);
 }
+
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export function validateField(field: BookingField, v: BookingFields, today: string): string | undefined {
   const value = (v[field] ?? "").trim();
@@ -68,28 +74,19 @@ export function validateField(field: BookingField, v: BookingFields, today: stri
       if (value.length < 2) return "Skriv ditt namn.";
       if (value.length > 100) return "Namnet är för långt.";
       return;
-    case "contactMethod":
-      if (!site.contactMethods.some((m) => m.id === value)) return "Välj hur vi ska kontakta dig.";
-      return;
-    case "contactValue": {
-      if (!value) {
-        const method = site.contactMethods.find((m) => m.id === v.contactMethod);
-        return `Fyll i ${method ? method.inputLabel.toLowerCase() : "dina kontaktuppgifter"}.`;
-      }
-      if (v.contactMethod === "phone" || v.contactMethod === "sms") {
-        const digits = value.replace(/\D/g, "");
-        if (!/^[+\d][\d\s()-]*$/.test(value) || digits.length < 7 || digits.length > 15)
-          return "Ange ett giltigt telefonnummer, t.ex. 070-123 45 67.";
-      }
-      if (v.contactMethod === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value))
-        return "Ange en giltig e-postadress.";
-      if (v.contactMethod === "instagram" && !/^@?[A-Za-z0-9._]{1,30}$/.test(value))
-        return "Ange ditt Instagram-användarnamn, t.ex. @dittnamn.";
-      if (value.length > 120) return "För långt.";
+    case "phone": {
+      const digits = value.replace(/\D/g, "");
+      if (!value) return "Fyll i ditt telefonnummer.";
+      if (!/^[+\d][\d\s()-]*$/.test(value) || digits.length < 7 || digits.length > 15)
+        return "Ange ett giltigt telefonnummer, t.ex. 070-123 45 67.";
       return;
     }
+    case "email":
+      if (!value) return "Fyll i din e-postadress.";
+      if (value.length > 120 || !EMAIL_PATTERN.test(value)) return "Ange en giltig e-postadress, t.ex. namn@exempel.se.";
+      return;
     case "vehicle":
-      if (value.length < 2) return "Skriv bilens märke och modell, t.ex. Volvo V60.";
+      if (value.length < 2) return "Skriv registreringsnummer eller bilmodell, t.ex. ABC123 eller Volvo V60.";
       if (value.length > 100) return "För långt.";
       return;
     case "service":
@@ -102,11 +99,11 @@ export function validateField(field: BookingField, v: BookingFields, today: stri
       if (value > addDays(today, 365)) return "Välj ett datum inom ett år.";
       return;
     }
-    case "timeWindow":
-      if (!site.timeWindows.includes(value)) return "Välj ungefärlig tid.";
+    case "time":
+      if (!bookingTimes().includes(value)) return "Välj en önskad tid.";
       return;
     case "arrangement":
-      if (!getArrangement(value)) return "Välj hur vi ska göra med bilen.";
+      if (!getArrangement(value)) return "Välj mobil bilvård eller hämtning och lämning.";
       return;
     case "location":
       if (locationRequired(v.arrangement) && value.length < 5) return "Skriv adressen där bilen står, t.ex. Storgatan 1, Kristianstad.";
@@ -130,11 +127,11 @@ export const fieldOrder: BookingField[] = [
   "location",
   "travelZone",
   "date",
-  "timeWindow",
+  "time",
   "vehicle",
   "name",
-  "contactMethod",
-  "contactValue",
+  "phone",
+  "email",
   "message",
   "consent",
 ];
@@ -178,26 +175,24 @@ export function priceSummary(serviceId: string, arrangementId: string, travelZon
   };
 }
 
-/** Bygger en läsbar textsammanfattning av förfrågan (för e-post/webhook). */
+/** Bygger en läsbar textsammanfattning av förfrågan (för mejl till företaget och webhook). */
 export function bookingAsText(v: BookingFields, reference: string, photoCount: number) {
   const { service, arrangement, zone, base, fee, feeKnown, total } = priceSummary(v.service, v.arrangement, v.travelZone);
-  const method = site.contactMethods.find((m) => m.id === v.contactMethod);
   const kr = (n: number) => `${n} kr`;
   return [
     `Ny bokningsförfrågan (${reference})`,
     `OBS: Förfrågan är inte bekräftad. Kontakta kunden för att bekräfta tid och pris.`,
     ``,
     `Namn: ${v.name}`,
-    `Kontakt: ${method?.label ?? v.contactMethod} – ${v.contactValue}`,
+    `Telefon: ${v.phone}`,
+    `E-post: ${v.email}`,
     `Bil: ${v.vehicle}`,
     `Tjänst: ${service?.name ?? v.service} (${kr(base)})`,
     `Upplägg: ${arrangement?.label ?? v.arrangement}`,
     `Adress: ${v.location || "–"}`,
-    ...(arrangement?.feeApplies
-      ? [`Reseavgift: ${zone ? zone.label : "–"}${fee ? ` (+${kr(fee)})` : " – bekräfta utifrån adressen"}`]
-      : []),
-    `Önskad dag: ${v.date}, ${v.timeWindow}`,
-    `Preliminärt pris: ${kr(total)}${feeKnown ? "" : arrangement?.feeApplies ? " + reseavgift (bekräftas)" : " + ev. avgift enligt överenskommelse"}`,
+    `Reseavgift: ${zone ? zone.label : "–"}${fee ? ` (+${kr(fee)})` : " – bekräfta utifrån adressen"}`,
+    `Önskad dag: ${v.date}, ${v.time === "Flexibel" ? "flexibel tid" : `kl. ${v.time}`}`,
+    `Preliminärt pris: ${kr(total)}${feeKnown ? "" : " + reseavgift (bekräftas)"}`,
     `Bifogade bilder: ${photoCount}`,
     ``,
     `Meddelande:`,

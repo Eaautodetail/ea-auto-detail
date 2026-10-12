@@ -1,9 +1,10 @@
 /**
  * EA Auto Detail – central innehållsfil.
  *
- * Allt som rör företaget (kontaktuppgifter, priser, tjänster, sociala medier,
- * galleri och vanliga frågor) uppdateras HÄR. Komponenterna läser bara från
- * den här filen, så ingen annan kod behöver ändras när något nytt ska ut.
+ * Allt som rör företaget (kontaktuppgifter, priser, tjänster, reseavgifter,
+ * arbetstider, betalning, sociala medier, galleri och vanliga frågor)
+ * uppdateras HÄR. Komponenterna läser bara från den här filen, så ingen annan
+ * kod behöver ändras när något nytt ska ut.
  *
  * Värden som är `null` är uppgifter vi ännu inte har fått. De visas som
  * tydligt markerade platshållare så länge `showPlaceholders` är `true`.
@@ -15,10 +16,21 @@ import { formatSEK } from "@/lib/format";
 
 /** Priser i hela kronor (SEK). Ändra här så uppdateras hela sajten. */
 const PRICE = { exterior: 149, interior: 249, complete: 349 } as const;
+
 /** Reseavgift i SEK när vi åker till kunden eller hämtar och lämnar bilen. */
 const TRAVEL_FEE = { near: 150, far: 250 } as const;
 
+/** Hur långt vi åker, i km från Kristianstad. */
+const TRAVEL_KM = { near: 5, max: 20 } as const;
+
+/** Arbetstider per säsong. Byt `currentSeason` längre ned när säsongen skiftar. */
+const SEASONS = {
+  summer: { label: "Varmare delen av året", open: "09.00", close: "19.00" },
+  winter: { label: "Vinterhalvåret", open: "09.00", close: "18.00" },
+} as const;
+
 export type ServiceId = "exterior" | "interior" | "complete";
+export type SeasonId = keyof typeof SEASONS;
 
 export type Service = {
   id: ServiceId;
@@ -27,18 +39,16 @@ export type Service = {
   /** Pris i hela kronor (SEK). */
   price: number;
   summary: string;
-  /**
-   * Vad som ingår. `includesConfirmed: false` betyder att listan är ett
-   * utkast som EA Auto Detail måste bekräfta innan publicering.
-   */
+  /** Vad som ingår (bekräftat av EA Auto Detail). */
   includes: string[];
-  includesConfirmed: boolean;
-  /** Ungefärlig tidsåtgång, t.ex. "ca 1 timme". `null` = ej angivet än. */
+  /** Ungefärlig tidsåtgång, t.ex. "30–45 minuter". `null` = ej angivet. */
   duration: string | null;
+  /** Vad vi behöver tillgång till när vi jobbar hos kunden (mobil bilvård). */
+  onSite: { electricity: boolean; water: boolean };
   highlighted?: boolean;
 };
 
-export type Arrangement = "visit" | "pickup" | "other";
+export type Arrangement = "visit" | "pickup";
 
 export type TravelZone = {
   id: string;
@@ -72,9 +82,14 @@ export type Faq = {
   placeholderHint?: string;
 };
 
+const hoursText = (s: SeasonId) => `${SEASONS[s].open}–${SEASONS[s].close}`;
+
 export const site = {
   name: "EA Auto Detail",
-  /** Används för sitemap, delningslänkar m.m. Sätts via NEXT_PUBLIC_SITE_URL. */
+  /**
+   * Används för sitemap, delningslänkar och länkar i mejl. Sätts via
+   * NEXT_PUBLIC_SITE_URL, annars används Vercels produktionsadress automatiskt.
+   */
   url:
     process.env.NEXT_PUBLIC_SITE_URL ??
     (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
@@ -86,7 +101,7 @@ export const site = {
 
   tagline: "Noggrann bilvård – hos dig eller hos oss",
   description:
-    "EA Auto Detail är ett litet bilvårdsföretag som drivs av två unga entreprenörer. Utvändig biltvätt, invändig bilrengöring och mobil bilvård till schyssta priser.",
+    "EA Auto Detail är ett litet bilvårdsföretag i Kristianstad som drivs av två unga entreprenörer. Utvändig biltvätt, invändig rengöring och mobil bilvård – vi kommer till dig eller hämtar bilen.",
 
   /** Logotyp. `null` = textbaserad ordmärkning används. */
   logo: null as null | { src: string; width: number; height: number },
@@ -95,15 +110,32 @@ export const site = {
   heroImage: null as null | { src: string; alt: string },
 
   contact: {
-    /** Telefonnummer i format för visning, t.ex. "070-123 45 67". */
+    /** Telefonnummer i format för visning. */
     phone: "072-350 48 05" as string | null,
-    /** Samma nummer i internationellt format för länkar, t.ex. "+46701234567". */
+    /** Samma nummer i internationellt format för länkar. */
     phoneHref: "+46723504805" as string | null,
     email: "eaautodetail2026@gmail.com" as string | null,
-    /** Område vi utgår från / åker till, t.ex. "Västerås med omnejd". */
-    serviceArea: "Kristianstad med omnejd, upp till ca 20 km" as string | null,
-    /** Svarstider eller tider vi tar emot bokningar, t.ex. "Vardagar 16–20". */
-    availability: null as string | null,
+    /** Område vi utgår från / åker till. */
+    serviceArea: `Kristianstad med omnejd, upp till ca ${TRAVEL_KM.max} km (t.ex. Åhus)` as string | null,
+  },
+
+  /** Svarstid – visas vid bokningen, på kontaktsidan och i kvittomejlet. */
+  responseTime: "Vi återkommer så snabbt vi kan – alltid inom 24 timmar.",
+
+  /**
+   * Arbetstider. Vi jobbar alla dagar i veckan. Byt `currentSeason` till
+   * "summer" eller "winter" när säsongen skiftar – då uppdateras tiderna på
+   * hela sajten och i bokningsformuläret.
+   */
+  hours: {
+    currentSeason: "winter" as SeasonId,
+    days: "Alla dagar",
+    seasons: SEASONS,
+  },
+
+  payment: {
+    methods: ["Swish", "Kontanter"],
+    when: "Du betalar på plats när jobbet är klart.",
   },
 
   social: {
@@ -116,21 +148,20 @@ export const site = {
   baseTown: "Kristianstad",
 
   /**
-   * Reseavgift som tillkommer när vi åker till kunden eller hämtar och lämnar
-   * bilen. Kunden väljer zon i bokningen och vi bekräftar avgiften utifrån
-   * adressen innan bokningen är spikad.
+   * Reseavgift som tillkommer vid mobil bilvård och vid hämtning och lämning.
+   * Kunden väljer zon i bokningen och vi bekräftar avgiften utifrån adressen.
    */
   travelZones: [
     {
       id: "near",
-      label: "Inom ca 5 km från Kristianstad",
-      description: "T.ex. centrala Kristianstad med närområde.",
+      label: `Inom ca ${TRAVEL_KM.near} km från Kristianstad`,
+      description: "Kristianstad med närområde.",
       fee: TRAVEL_FEE.near,
     },
     {
       id: "far",
-      label: "5–20 km från Kristianstad",
-      description: "Längre än ca 5 km, men högst 20 km bort.",
+      label: `${TRAVEL_KM.near}–${TRAVEL_KM.max} km från Kristianstad`,
+      description: "T.ex. Åhus.",
       fee: TRAVEL_FEE.far,
     },
     {
@@ -143,6 +174,7 @@ export const site = {
 
   /** Lägsta reseavgiften, för texter som "från 150 kr". */
   travelFeeFrom: TRAVEL_FEE.near,
+  travelMaxKm: TRAVEL_KM.max,
 
   services: [
     {
@@ -151,9 +183,14 @@ export const site = {
       shortName: "Utvändigt",
       price: PRICE.exterior,
       summary: "En ordentlig tvätt av bilens utsida så att den blir ren och fräsch igen.",
-      includes: ["Tvätt av kaross", "Fälgar och däck", "Rutor utvändigt", "Torkning"],
-      includesConfirmed: false,
-      duration: null,
+      includes: [
+        "Tvätt av bilens kaross",
+        "Rengöring av fälgar och däck",
+        "Rengöring av utvändiga rutor",
+        "Torkning av bilen",
+      ],
+      duration: "30–45 minuter",
+      onSite: { electricity: true, water: true },
     },
     {
       id: "interior",
@@ -163,31 +200,40 @@ export const site = {
       summary: "Vi rengör kupén så att bilen känns ren och skön att sitta i.",
       includes: [
         "Dammsugning av säten, golv och mattor",
-        "Avtorkning av instrumentbräda och paneler",
-        "Rutor invändigt",
-        "Dörrsidor och dörröppningar",
+        "Avtorkning av instrumentpanel och plastytor",
+        "Rengöring av invändiga rutor",
+        "Rengöring av dörrpaneler",
+        "Rengöring av dörrkarmar",
       ],
-      includesConfirmed: false,
-      duration: null,
+      duration: "cirka 60 minuter",
+      onSite: { electricity: true, water: false },
     },
     {
       id: "complete",
-      name: "Invändig + utvändig",
+      name: "Invändig + utvändig rengöring",
       shortName: "In- och utvändigt",
       price: PRICE.complete,
-      summary: "Både insida och utsida i ett och samma besök – vårt mest prisvärda val.",
+      summary: "Allt som ingår i både den invändiga rengöringen och den utvändiga biltvätten – i ett och samma besök.",
       includes: ["Allt i utvändig biltvätt", "Allt i invändig rengöring"],
-      includesConfirmed: false,
-      duration: null,
+      duration: "1,5–2 timmar",
+      onSite: { electricity: true, water: true },
       highlighted: true,
     },
   ] satisfies Service[] as Service[],
 
+  /** Tidsåtgången är alltid en uppskattning. */
+  durationNote:
+    "Alla tider är uppskattningar. Hur lång tid det tar beror på bilens storlek, skick och hur smutsig den är.",
+
+  /** Gäller alla tjänster – visas nära priserna och i bokningen. */
+  extraWorkNote:
+    "Är bilen ovanligt smutsig eller behöver extra arbete kan en extra avgift tillkomma. Du får alltid veta vad det kostar och godkänna det innan vi gör extraarbetet.",
+
   arrangements: [
     {
       id: "visit",
-      label: "Ni kommer till mig",
-      description: "Vi tvättar bilen där den står.",
+      label: "Mobil bilvård",
+      description: "Vi kommer till dig och tvättar bilen där den står.",
       feeApplies: true,
     },
     {
@@ -196,26 +242,19 @@ export const site = {
       description: "Vi hämtar bilen, gör jobbet hos oss och lämnar tillbaka den.",
       feeApplies: true,
     },
-    {
-      id: "other",
-      label: "Annat upplägg",
-      description: "Vi pratar ihop oss om vad som passar bäst.",
-      feeApplies: false,
-    },
   ] satisfies { id: Arrangement; label: string; description: string; feeApplies: boolean }[],
 
-  timeWindows: ["Förmiddag", "Eftermiddag", "Kväll", "Flexibel"],
-
-  contactMethods: [
-    { id: "phone", label: "Telefonsamtal", inputLabel: "Telefonnummer", type: "tel" },
-    { id: "sms", label: "SMS", inputLabel: "Mobilnummer", type: "tel" },
-    { id: "email", label: "E-post", inputLabel: "E-postadress", type: "email" },
-    { id: "instagram", label: "Instagram", inputLabel: "Instagram-användarnamn", type: "text" },
-  ] as const,
+  /** Krav vid mobil bilvård, utöver el/vatten som beror på tjänst (se `onSiteNeeds`). */
+  onSite: {
+    parking: "En lämplig parkeringsplats där bilen kan stå och där vi får plats att arbeta.",
+    mat: "Vi lägger en miljömatta under bilen som samlar upp tvättvattnet.",
+    pickupNote: "Vid hämtning och lämning gör vi jobbet hos oss – du behöver inte ordna vatten, el eller tvättplats.",
+  },
 
   /**
    * Galleri. Lägg egna bilder i /public/gallery/ och lägg till ett objekt
-   * per jobb. Platshållarna nedan ska tas bort när riktiga bilder finns.
+   * per jobb (se BILDER.md). Platshållarna nedan ska tas bort när riktiga
+   * bilder finns.
    */
   gallery: [
     {
@@ -265,61 +304,70 @@ export const site = {
       id: "vad-ingar",
       question: "Vad ingår i de olika tjänsterna?",
       answer:
-        `Utvändig biltvätt (${formatSEK(PRICE.exterior)}) gäller bilens utsida, invändig rengöring (${formatSEK(PRICE.interior)}) gäller kupén och invändig + utvändig (${formatSEK(PRICE.complete)}) är båda delarna i samma besök. Under Tjänster & priser ser du vad som ingår i varje tjänst.`,
+        `Utvändig biltvätt (${formatSEK(PRICE.exterior)}) är tvätt av kaross, fälgar, däck och utvändiga rutor samt torkning. Invändig rengöring (${formatSEK(PRICE.interior)}) är dammsugning, avtorkning av instrumentpanel och plastytor, invändiga rutor, dörrpaneler och dörrkarmar. Invändig + utvändig (${formatSEK(PRICE.complete)}) är båda delarna i samma besök.`,
     },
     {
       id: "hur-lang-tid",
       question: "Hur lång tid tar en rengöring?",
-      answer: null,
-      placeholderHint: "Ange ungefärlig tid per tjänst, t.ex. utvändigt ca X min, invändigt ca X min.",
+      answer:
+        "Utvändig biltvätt tar ungefär 30–45 minuter, invändig rengöring cirka 60 minuter och invändig + utvändig 1,5–2 timmar. Tiderna är uppskattningar – det beror på bilens storlek, skick och hur smutsig den är.",
     },
     {
       id: "mobil-service",
-      question: "Hur fungerar mobil service?",
+      question: "Hur fungerar mobil bilvård?",
       answer:
-        `Vi kommer till dig och tvättar bilen där den står. Då tillkommer en reseavgift: ${formatSEK(TRAVEL_FEE.near)} inom ca 5 km från Kristianstad och ${formatSEK(TRAVEL_FEE.far)} upp till 20 km bort. Skriv adressen i bokningsförfrågan så bekräftar vi avgiften.`,
+        `Vi kommer till dig och tvättar bilen där den står. Då tillkommer en reseavgift: ${formatSEK(TRAVEL_FEE.near)} inom ca ${TRAVEL_KM.near} km från Kristianstad och ${formatSEK(TRAVEL_FEE.far)} upp till ${TRAVEL_KM.max} km (t.ex. Åhus). Skriv adressen i bokningsförfrågan så bekräftar vi avgiften.`,
     },
     {
       id: "mobil-krav",
       question: "Vad behöver finnas på plats när ni kommer till mig?",
-      answer: null,
-      placeholderHint: "Beskriv vad som krävs på plats, t.ex. om ni behöver tillgång till vatten och el eller har med allt själva.",
+      answer:
+        "För invändig rengöring behöver vi tillgång till el. För utvändig biltvätt och för invändig + utvändig behöver vi tillgång till både vatten och el. Bilen behöver stå på en lämplig parkeringsplats där vi får plats att arbeta. Vi lägger en miljömatta under bilen som samlar upp tvättvattnet. Väljer du hämtning och lämning behöver du inte ordna något av detta.",
     },
     {
       id: "hamtning",
       question: "Hur fungerar hämtning och lämning?",
       answer:
-        `Om det passar dig bättre hämtar vi bilen, gör jobbet hos oss och lämnar tillbaka den när den är klar. Samma reseavgift gäller som vid mobil bilvård: ${formatSEK(TRAVEL_FEE.near)} inom ca 5 km från Kristianstad och ${formatSEK(TRAVEL_FEE.far)} upp till 20 km bort. Tider och nyckelöverlämning bestämmer vi när vi bekräftar bokningen.`,
+        `Vi hämtar bilen, gör jobbet hos oss och lämnar tillbaka den när den är klar. Du behöver inte ordna vatten, el eller tvättplats. Samma reseavgift gäller som vid mobil bilvård: ${formatSEK(TRAVEL_FEE.near)} inom ca ${TRAVEL_KM.near} km från Kristianstad och ${formatSEK(TRAVEL_FEE.far)} upp till ${TRAVEL_KM.max} km. Tider och nyckelöverlämning bestämmer vi när vi bekräftar bokningen.`,
     },
     {
       id: "extra-smutsig",
       question: "Vad händer om bilen är extra smutsig?",
       answer:
-        "Väldigt smutsiga bilar, svåra fläckar eller jobb som kräver mer arbete kan kosta extra. Då får du alltid ett prisförslag först, och vi börjar aldrig med extraarbetet innan du har godkänt det.",
+        "Är bilen ovanligt smutsig eller behöver extra arbete kan en extra avgift tillkomma. Du får alltid veta vad det kostar och godkänna det innan vi gör extraarbetet.",
     },
     {
       id: "boka",
       question: "Hur bokar jag?",
       answer:
-        "Fyll i bokningsförfrågan här på sidan. Välj tjänst, önskad dag och tid och hur du vill att vi gör med bilen. Förfrågan är inte en bekräftad bokning – vi hör av oss och bekräftar tid och pris innan något är spikat.",
+        "Fyll i bokningsförfrågan här på sidan. Välj tjänst, dag och tid och om vi ska komma till dig eller hämta bilen. En förfrågan är inte en bekräftad bokning – vi återkommer alltid inom 24 timmar och bekräftar tid och pris.",
     },
     {
       id: "betalning",
       question: "Hur betalar jag?",
-      answer: null,
-      placeholderHint: "Ange betalsätt, t.ex. Swish, kort eller faktura, och när betalningen sker.",
+      answer: "Du kan betala med Swish eller kontanter. Betalningen sker på plats när jobbet är klart.",
+    },
+    {
+      id: "arbetstider",
+      question: "När jobbar ni?",
+      answer: `Vi jobbar alla dagar i veckan: ${hoursText("summer")} under den varmare delen av året och ${hoursText("winter")} under vinterhalvåret.`,
+    },
+    {
+      id: "svarstid",
+      question: "Hur snabbt svarar ni?",
+      answer: "Vi återkommer så snabbt vi kan, ofta direkt – och alltid inom 24 timmar.",
     },
     {
       id: "kontakt",
       question: "Hur kontaktar jag er?",
       answer:
-        "Ring eller sms:a oss på 072-350 48 05, skriv till oss på Instagram, Facebook eller TikTok, eller skicka en bokningsförfrågan här på sidan.",
+        "Enklast är att skicka en bokningsförfrågan här på sidan. Du kan också ringa eller sms:a oss på 072-350 48 05 eller skriva till oss på Instagram, Facebook eller TikTok.",
     },
     {
       id: "omrade",
       question: "Vilka områden åker ni till?",
       answer:
-        `Vi utgår från Kristianstad och åker upp till ca 20 km därifrån. Inom ca 5 km är reseavgiften ${formatSEK(TRAVEL_FEE.near)} och mellan 5 och 20 km ${formatSEK(TRAVEL_FEE.far)}.`,
+        `Vi utgår från Kristianstad och åker upp till ca ${TRAVEL_KM.max} km därifrån, t.ex. till Åhus. Inom ca ${TRAVEL_KM.near} km är reseavgiften ${formatSEK(TRAVEL_FEE.near)} och mellan ${TRAVEL_KM.near} och ${TRAVEL_KM.max} km ${formatSEK(TRAVEL_FEE.far)}.`,
     },
   ] satisfies Faq[] as Faq[],
 };
@@ -336,6 +384,43 @@ export function getTravelZone(id: string | null | undefined) {
 
 export function getArrangement(id: string | null | undefined) {
   return site.arrangements.find((a) => a.id === id);
+}
+
+/** Aktuella arbetstider, t.ex. { label: "Vinterhalvåret", open: "09.00", close: "18.00", text: "09.00–18.00" }. */
+export function currentHours() {
+  const s = site.hours.seasons[site.hours.currentSeason];
+  return { ...s, text: `${s.open}–${s.close}` };
+}
+
+/** Arbetstider för en viss säsong som text, t.ex. "09.00–19.00". */
+export function seasonHoursText(season: SeasonId) {
+  return hoursText(season);
+}
+
+/**
+ * Starttider kunden kan välja i bokningen: varje hel timme från öppning till
+ * en timme före stängning enligt aktuell säsong, plus "Flexibel".
+ */
+export function bookingTimes(): string[] {
+  const { open, close } = currentHours();
+  const first = parseInt(open, 10);
+  const last = parseInt(close, 10) - 1;
+  const times: string[] = [];
+  for (let h = first; h <= last; h++) times.push(`${String(h).padStart(2, "0")}.00`);
+  return [...times, "Flexibel"];
+}
+
+/** Vad vi behöver på plats vid mobil bilvård för en viss tjänst. */
+export function onSiteNeeds(serviceId: string | null | undefined): string[] {
+  const service = getService(serviceId);
+  const needs: string[] = [];
+  if (service) {
+    if (service.onSite.water && service.onSite.electricity) needs.push("Tillgång till vatten och el");
+    else if (service.onSite.electricity) needs.push("Tillgång till el");
+    else if (service.onSite.water) needs.push("Tillgång till vatten");
+  }
+  needs.push(site.onSite.parking);
+  return needs;
 }
 
 export const socialLinks = (
