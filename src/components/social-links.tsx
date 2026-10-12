@@ -22,40 +22,68 @@ export function SocialIcon({ id, className = "size-5" }: { id: string; className
   );
 }
 
+/** "https://www.instagram.com/eaautodetail_/" → "@eaautodetail_". Delningslänkar (t.ex. Facebook /share/) ger null. */
+export function socialHandle(href: string): string | null {
+  try {
+    const first = new URL(href).pathname.split("/").filter(Boolean)[0];
+    if (!first || first === "share" || first.includes(".")) return null;
+    return first.startsWith("@") ? first : `@${first}`;
+  } catch {
+    return null;
+  }
+}
+
+const linkClasses = {
+  icons:
+    "grid size-11 place-items-center rounded-full border border-white/15 text-mist-200 transition-colors hover:border-white/40 hover:text-white",
+  pills:
+    "inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white transition-colors hover:border-white/40 hover:bg-white/10",
+  list: "group inline-flex min-h-11 items-center gap-3 py-1 text-sm text-mist-200 transition-colors hover:text-white",
+} as const;
+
 /**
- * Länkar till sociala medier. Kanaler utan riktig adress visas som
- * platshållare (eller döljs när `showPlaceholders` är false).
+ * Länkar till sociala medier (från `site.social`). Kanaler utan riktig
+ * adress visas som platshållare (eller döljs när `showPlaceholders` är false).
+ * - `pills`: ikon + namn i knappar (standard)
+ * - `icons`: bara ikoner
+ * - `list`: lodrät lista med ikon, namn och användarnamn (sidfot)
  */
-export function SocialLinks({ variant = "pills" }: { variant?: "pills" | "icons" }) {
+export function SocialLinks({ variant = "pills" }: { variant?: "pills" | "icons" | "list" }) {
   const available = socialLinks.filter((s) => s.href);
   const missing = socialLinks.filter((s) => !s.href);
 
   return (
     <div className="flex flex-col gap-3">
       {available.length > 0 && (
-        <ul className="flex flex-wrap gap-2">
-          {available.map((s) => (
-            <li key={s.id}>
-              <TrackedAnchor
-                href={s.href!}
-                target="_blank"
-                rel="noopener noreferrer"
-                event="social_link_click"
-                eventProps={{ network: s.id }}
-                className={
-                  variant === "icons"
-                    ? "grid size-11 place-items-center rounded-full border border-white/15 text-mist-200 transition-colors hover:border-white/40 hover:text-white"
-                    : "inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white transition-colors hover:border-white/40 hover:bg-white/10"
-                }
-              >
-                <SocialIcon id={s.id} />
-                <span className={variant === "icons" ? "sr-only" : ""}>
-                  {s.label}
-                  <span className="sr-only"> (öppnas i ny flik)</span>
-                </span>
-              </TrackedAnchor>
-            </li>
-          ))}
+        <ul className={variant === "list" ? "flex flex-col gap-1" : "flex flex-wrap gap-2"}>
+          {available.map((s) => {
+            const handle = variant === "list" ? socialHandle(s.href!) : null;
+            return (
+              <li key={s.id}>
+                <TrackedAnchor
+                  href={s.href!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  event="social_link_click"
+                  eventProps={{ network: s.id }}
+                  className={linkClasses[variant]}
+                >
+                  {variant === "list" ? (
+                    <span className="grid size-9 shrink-0 place-items-center rounded-full border border-white/15 transition-colors group-hover:border-white/40">
+                      <SocialIcon id={s.id} className="size-[18px]" />
+                    </span>
+                  ) : (
+                    <SocialIcon id={s.id} />
+                  )}
+                  <span className={variant === "icons" ? "sr-only" : ""}>
+                    <span className={variant === "list" ? "font-semibold text-white" : ""}>{s.label}</span>
+                    {handle && <span className="ml-1.5 text-mist-400">{handle}</span>}
+                    <span className="sr-only"> (öppnas i ny flik)</span>
+                  </span>
+                </TrackedAnchor>
+              </li>
+            );
+          })}
         </ul>
       )}
       {site.showPlaceholders && missing.length > 0 && (

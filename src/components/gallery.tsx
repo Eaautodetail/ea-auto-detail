@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { getService, site, type GalleryItem } from "@/config/site";
 import { BeforeAfter } from "@/components/before-after";
+import { SocialLinks } from "@/components/social-links";
 
 const filters = [
   { id: "all", label: "Alla" },
@@ -12,7 +13,21 @@ const filters = [
 
 type FilterId = (typeof filters)[number]["id"];
 
-export function Gallery({ items = site.gallery, limit, showFilters = true }: { items?: GalleryItem[]; limit?: number; showFilters?: boolean }) {
+/**
+ * Före/efter-galleri som byggs från `site.gallery` i src/config/site.ts.
+ * Nya bilder läggs till enligt BILDER.md – ingen kod behöver ändras.
+ * Platshållare (`placeholder: true`) märks alltid som exempel och döljs helt
+ * när `site.showPlaceholders` är false.
+ */
+export function Gallery({
+  items = site.gallery,
+  limit,
+  showFilters = true,
+}: {
+  items?: GalleryItem[];
+  limit?: number;
+  showFilters?: boolean;
+}) {
   const [filter, setFilter] = useState<FilterId>("all");
   const visibleItems = (site.showPlaceholders ? items : items.filter((i) => !i.placeholder))
     .filter((i) => filter === "all" || i.category === filter)
@@ -41,15 +56,20 @@ export function Gallery({ items = site.gallery, limit, showFilters = true }: { i
 
       {hasPlaceholders && (
         <p className="mb-6 rounded-lg border border-dashed border-amber-300/50 bg-amber-300/10 px-4 py-3 text-sm text-amber-200">
-          <strong className="font-semibold">Exempelbilder.</strong> Bilderna nedan är platshållare och visar inte
-          riktiga kundjobb. Byt ut dem mot egna före- och efterbilder i <code className="text-amber-100">src/config/site.ts</code>.
+          <strong className="font-semibold">Exempelbilder.</strong> Bilderna nedan är tillfälliga platshållare och
+          visar inte riktiga kundjobb. Våra egna före- och efterbilder läggs in här (se BILDER.md).
         </p>
       )}
 
       {visibleItems.length === 0 ? (
-        <p className="rounded-xl border border-white/10 bg-ink-900 px-6 py-10 text-center text-mist-300">
-          Här kommer snart bilder från våra jobb. Följ oss i sociala medier så länge!
-        </p>
+        <div className="flex flex-col items-center gap-5 rounded-xl border border-white/10 bg-ink-900 px-6 py-10 text-center">
+          <p className="max-w-md text-mist-300">
+            {filter === "all"
+              ? "Här lägger vi upp före- och efterbilder från våra jobb. Så länge hittar du dem på våra sociala medier."
+              : "Inga bilder i den här kategorin än. Fler före- och efterbilder hittar du på våra sociala medier."}
+          </p>
+          <SocialLinks />
+        </div>
       ) : (
         <ul className="grid gap-6 md:grid-cols-2">
           {visibleItems.map((item) => {
@@ -57,13 +77,14 @@ export function Gallery({ items = site.gallery, limit, showFilters = true }: { i
             return (
               <li key={item.id} className="reveal">
                 <figure className="rounded-2xl border border-white/10 bg-ink-900 p-3">
-                  <BeforeAfter before={item.before} after={item.after} label={item.title} />
-                  <figcaption className="flex items-center justify-between gap-4 px-2 pb-1 pt-4">
+                  <BeforeAfter before={item.before} after={item.after} label={item.title} placeholder={item.placeholder} />
+                  <figcaption className="flex items-start justify-between gap-4 px-2 pb-1 pt-4">
                     <span>
                       <span className="block font-semibold text-white">{item.title}</span>
                       <span className="text-sm text-mist-400">
                         {[item.vehicle, service?.name].filter(Boolean).join(" · ")}
                       </span>
+                      {item.note && <span className="mt-1 block text-sm text-mist-300">{item.note}</span>}
                     </span>
                     {item.placeholder ? (
                       <span className="shrink-0 rounded-full border border-dashed border-amber-300/50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-200">

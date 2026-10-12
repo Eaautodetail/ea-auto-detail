@@ -5,7 +5,10 @@ export default function robots(): MetadataRoute.Robots {
   // Sätt NEXT_PUBLIC_ALLOW_INDEXING=true först när sajten är klar att publiceras.
   const allow = process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true";
   return {
-    rules: allow ? { userAgent: "*", allow: "/", disallow: "/api/" } : { userAgent: "*", disallow: "/" },
+    // /hantera är en intern sida för att bekräfta bokningar och ska aldrig indexeras.
+    rules: allow
+      ? { userAgent: "*", allow: "/", disallow: ["/api/", "/hantera"] }
+      : { userAgent: "*", disallow: "/" },
     sitemap: `${site.url}/sitemap.xml`,
   };
 }

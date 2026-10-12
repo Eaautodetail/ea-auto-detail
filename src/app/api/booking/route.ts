@@ -1,12 +1,17 @@
 /**
  * Tar emot bokningsförfrågningar från formuläret på /boka.
  *
- * Förfrågan levereras via en eller båda av följande kanaler (se README):
- *  - E-post via Resend:  RESEND_API_KEY + BOOKING_EMAIL_TO + BOOKING_EMAIL_FROM
+ * Förfrågan levereras till företaget via en eller båda av (se README):
+ *  - E-post: SMTP (t.ex. Gmail med applösenord) eller Resend – se src/lib/email.ts
  *  - Webhook (t.ex. Make, Zapier, n8n eller Google Apps Script): BOOKING_WEBHOOK_URL
  *
- * Är ingen kanal konfigurerad svarar routen 503 och formuläret visar det
- * ärligt för besökaren – inga låtsasbekräftelser.
+ * Därefter får kunden ett automatiskt KVITTO på att förfrågan har tagits emot
+ * (inte en bekräftelse), om e-post till kunder är konfigurerad. Att kvittot inte
+ * går iväg gör aldrig att förfrågan misslyckas – svaret säger bara
+ * `customerEmailSent: false`.
+ *
+ * Är ingen kanal till företaget konfigurerad svarar routen 503 och formuläret
+ * visar det ärligt för besökaren – inga låtsasbekräftelser.
  *
  * Integritet: personuppgifter loggas aldrig och sparas inte på servern.
  */
@@ -19,26 +24,19 @@ import {
   validatePhotos,
   type BookingFields,
 } from "@/lib/booking";
+import { manageBookingUrl, sealBookingToken } from "@/lib/booking-token";
+import { DeliveryError, describeDeliveryError, emailConfig, isSafeRecipient, sendEmail, type EmailConfig } from "@/lib/email";
+import { businessNotificationEmail, customerReceiptEmail } from "@/lib/email-templates";
+import { clientIp, createRateLimiter, json, publicOrigin } from "@/lib/http";
 
-type Photo = { filename: string; contentType: string; base64: string; size: number };
+// Körs i Node.js-runtime (standard i Next 16; nodemailer kräver det). `export const runtime`
+// får inte anges när cacheComponents är på.
+// Mejl till företaget + kvitto till kunden kan ta några sekunder var.
+export const maxDuration = 30;
 
-// Enkel spärr mot spam/missbruk. Fungerar per serverinstans – byt mot t.ex.
-// Upstash/Redis om sajten får mycket trafik.
-const WINDOW_MS = 10 * 60 * 1000;
-const MAX_PER_WINDOW = 8;
-const hits = new Map<string, number[]>();
+type Photo = { filename: string; contentType: string; content: Buffer; size: number };
 
-function rateLimited(ip: string, now: number) {
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
-  recent.push(now);
-  hits.set(ip, recent);
-  if (hits.size > 5000) hits.clear();
-  return recent.length > MAX_PER_WINDOW;
-}
-
-function json(body: unknown, status = 200) {
-  return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
-}
+const isRateLimited = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 8 });
 
 function makeReference() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -46,31 +44,28 @@ function makeReference() {
   return "EA-" + Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
 
-function escapeHtml(s: string) {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+async function notifyBusinessByEmail(
+  config: EmailConfig,
+  fields: BookingFields,
+  reference: string,
+  photos: Photo[],
+  manageUrl: string | null,
+  customerReceipt: "sending" | "not_configured" | "invalid_address",
+) {
+  const email = businessNotificationEmail(fields, reference, photos.length, { manageUrl, customerReceipt });
+  await sendEmail(
+    {
+      to: config.businessRecipients,
+      // Svara direkt till kunden från mejlprogrammet.
+      replyTo: isSafeRecipient(fields.email) ? fields.email : undefined,
+      ...email,
+      attachments: photos.map((p) => ({ filename: p.filename, content: p.content, contentType: p.contentType })),
+    },
+    config,
+  );
 }
 
-async function sendEmail(fields: BookingFields, text: string, reference: string, photos: Photo[]) {
-  const { RESEND_API_KEY, BOOKING_EMAIL_TO, BOOKING_EMAIL_FROM } = process.env;
-  const { service } = priceSummary(fields.service, fields.arrangement);
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: BOOKING_EMAIL_FROM,
-      to: BOOKING_EMAIL_TO!.split(",").map((s) => s.trim()),
-      ...(fields.contactMethod === "email" ? { reply_to: fields.contactValue } : {}),
-      subject: `Bokningsförfrågan ${reference}: ${service?.name ?? fields.service} – ${fields.name}`,
-      text,
-      html: `<pre style="font-family:system-ui,sans-serif;font-size:15px;white-space:pre-wrap">${escapeHtml(text)}</pre>`,
-      attachments: photos.map((p) => ({ filename: p.filename, content: p.base64 })),
-    }),
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) throw new Error(`Resend svarade ${res.status}`);
-}
-
-async function sendWebhook(fields: BookingFields, text: string, reference: string, photos: Photo[]) {
+async function notifyWebhook(fields: BookingFields, text: string, reference: string, photos: Photo[]) {
   const { service, arrangement, zone, base, feeKnown, total } = priceSummary(
     fields.service,
     fields.arrangement,
@@ -78,6 +73,8 @@ async function sendWebhook(fields: BookingFields, text: string, reference: strin
   );
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (process.env.BOOKING_WEBHOOK_SECRET) headers["X-Webhook-Secret"] = process.env.BOOKING_WEBHOOK_SECRET;
+  // Hanteringslänken (/hantera) skickas medvetet INTE hit – den ger tillgång till
+  // kundens uppgifter och ska bara finnas i företagets inkorg.
   const res = await fetch(process.env.BOOKING_WEBHOOK_URL!, {
     method: "POST",
     headers,
@@ -86,32 +83,30 @@ async function sendWebhook(fields: BookingFields, text: string, reference: strin
       status: "unconfirmed",
       reference,
       receivedAt: new Date().toISOString(),
-      customer: { name: fields.name, contactMethod: fields.contactMethod, contact: fields.contactValue },
+      customer: { name: fields.name, phone: fields.phone, email: fields.email },
       vehicle: fields.vehicle,
-      service: { id: service?.id, name: service?.name, price: base },
-      arrangement: { id: arrangement?.id, label: arrangement?.label },
+      service: { id: service?.id ?? fields.service, name: service?.name ?? null, price: base },
+      arrangement: { id: arrangement?.id ?? fields.arrangement, label: arrangement?.label ?? null },
       address: fields.location || null,
-      travel: arrangement?.feeApplies ? { zone: zone?.id ?? null, label: zone?.label ?? null, fee: zone?.fee ?? null } : null,
+      travel: arrangement?.feeApplies
+        ? { zone: zone?.id ?? null, label: zone?.label ?? null, fee: zone?.fee ?? null }
+        : null,
       preferredDate: fields.date,
-      preferredTime: fields.timeWindow,
+      preferredTime: fields.time,
       estimatedTotal: total,
       feeConfirmed: feeKnown,
       currency: "SEK",
       message: fields.message || null,
       summary: text,
-      photos: photos.map((p) => ({ filename: p.filename, contentType: p.contentType, base64: p.base64 })),
+      photos: photos.map((p) => ({ filename: p.filename, contentType: p.contentType, base64: p.content.toString("base64") })),
     }),
     signal: AbortSignal.timeout(15000),
   });
-  if (!res.ok) throw new Error(`Webhook svarade ${res.status}`);
+  if (!res.ok) throw new DeliveryError(`Webhook svarade ${res.status}`);
 }
 
 export async function POST(request: Request) {
-  const emailConfigured = !!(process.env.RESEND_API_KEY && process.env.BOOKING_EMAIL_TO && process.env.BOOKING_EMAIL_FROM);
-  const webhookConfigured = !!process.env.BOOKING_WEBHOOK_URL;
-
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "okänd";
-  if (rateLimited(ip, Date.now())) {
+  if (isRateLimited(clientIp(request))) {
     return json({ ok: false, code: "rate_limited", message: "För många förfrågningar. Vänta en stund och försök igen." }, 429);
   }
 
@@ -141,7 +136,9 @@ export async function POST(request: Request) {
     return json({ ok: false, code: "validation", message: "Kontrollera de markerade fälten.", errors }, 422);
   }
 
-  if (!emailConfigured && !webhookConfigured) {
+  const mail = emailConfig();
+  const webhookConfigured = !!process.env.BOOKING_WEBHOOK_URL;
+  if (!mail.canNotifyBusiness && !webhookConfigured) {
     return json(
       {
         ok: false,
@@ -154,24 +151,47 @@ export async function POST(request: Request) {
 
   const photos: Photo[] = await Promise.all(
     files.map(async (f, i) => ({
-      filename: f.name?.replace(/[^\w.\-]/g, "_") || `bild-${i + 1}.jpg`,
+      filename: f.name?.replace(/[^\w.\-]/g, "_").slice(0, 80) || `bild-${i + 1}.jpg`,
       contentType: f.type || "application/octet-stream",
       size: f.size,
-      base64: Buffer.from(await f.arrayBuffer()).toString("base64"),
+      content: Buffer.from(await f.arrayBuffer()),
     })),
   );
 
   const reference = makeReference();
   const text = bookingAsText(fields, reference, photos.length);
+  const customerAddressOk = isSafeRecipient(fields.email);
+  const customerReceipt = !mail.canEmailCustomers ? "not_configured" : customerAddressOk ? "sending" : "invalid_address";
+
+  // Krypterad länk så att företaget kan bekräfta tiden från /hantera (ingen databas behövs).
+  const { base, zone, arrangement } = priceSummary(fields.service, fields.arrangement, fields.travelZone);
+  const token = sealBookingToken({
+    reference,
+    name: fields.name,
+    email: fields.email,
+    phone: fields.phone,
+    vehicle: fields.vehicle,
+    service: fields.service,
+    arrangement: fields.arrangement,
+    location: fields.location,
+    travelZone: fields.travelZone,
+    date: fields.date,
+    time: fields.time,
+    quotedBase: base,
+    quotedFee: arrangement?.feeApplies ? (zone?.fee ?? null) : 0,
+  });
+  const manageUrl = token ? manageBookingUrl(publicOrigin(request), token) : null;
 
   const deliveries: Promise<void>[] = [];
-  if (emailConfigured) deliveries.push(sendEmail(fields, text, reference, photos));
-  if (webhookConfigured) deliveries.push(sendWebhook(fields, text, reference, photos));
+  if (mail.canNotifyBusiness) {
+    deliveries.push(notifyBusinessByEmail(mail, fields, reference, photos, manageUrl, customerReceipt));
+  }
+  if (webhookConfigured) deliveries.push(notifyWebhook(fields, text, reference, photos));
   const results = await Promise.allSettled(deliveries);
 
   const failed = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
   // Logga bara tekniska fel – aldrig kundens uppgifter.
-  failed.forEach((f) => console.error("[booking] leverans misslyckades:", f.reason instanceof Error ? f.reason.message : "okänt fel"));
+  failed.forEach((f) => console.error("[booking] leverans till företaget misslyckades:", describeDeliveryError(f.reason)));
 
   if (failed.length === results.length) {
     return json(
@@ -180,5 +200,25 @@ export async function POST(request: Request) {
     );
   }
 
-  return json({ ok: true, reference });
+  // Kvitto till kunden: att förfrågan är MOTTAGEN, inte bekräftad.
+  let customerEmailSent = false;
+  if (customerReceipt === "sending") {
+    try {
+      const receipt = customerReceiptEmail(fields, reference);
+      await sendEmail(
+        {
+          to: [fields.email],
+          replyTo: mail.businessReplyTo ?? undefined,
+          ...receipt,
+          headers: { "Auto-Submitted": "auto-generated" },
+        },
+        mail,
+      );
+      customerEmailSent = true;
+    } catch (error) {
+      console.error("[booking] kvitto till kunden kunde inte skickas:", describeDeliveryError(error));
+    }
+  }
+
+  return json({ ok: true, reference, customerEmailSent });
 }

@@ -1,19 +1,24 @@
 import type { Metadata } from "next";
-import { site } from "@/config/site";
+import { currentHours, site } from "@/config/site";
 import { PageHero, CtaBand, WhyUs } from "@/components/blocks";
 import { Placeholder, Section, SectionHeading } from "@/components/ui";
 import { SocialLinks } from "@/components/social-links";
 
 export const metadata: Metadata = {
-  title: "Om oss – två unga entreprenörer som brinner för bilar",
-  description: "EA Auto Detail drivs av två unga entreprenörer med ett stort intresse för bilar. Läs om hur och varför vi startade.",
+  title: "Om oss – två unga entreprenörer med bilintresse",
+  description: `${site.name} är ett litet bilvårdsföretag i ${site.baseTown} som drivs av två unga entreprenörer. Läs om hur och varför vi startade.`,
   alternates: { canonical: "/om-oss" },
 };
 
 export default function AboutPage() {
+  const hours = currentHours();
   return (
     <>
-      <PageHero eyebrow="Om oss" title="Två unga entreprenörer med ett stort bilintresse." intro="Det här är EA Auto Detail." />
+      <PageHero
+        eyebrow="Om oss"
+        title="Två unga entreprenörer med ett stort bilintresse."
+        intro={`Det här är ${site.name} – ett litet bilvårdsföretag i ${site.baseTown}.`}
+      />
 
       <Section labelledBy="historia-rubrik">
         <div className="grid gap-12 lg:grid-cols-[1.2fr_1fr]">
@@ -22,32 +27,37 @@ export default function AboutPage() {
               Vår historia
             </h2>
             <p>
-              Vi är två unga entreprenörer som alltid har gillat bilar – hur de ser ut, hur de känns och hur skönt det
-              är att sätta sig i en bil som är riktigt ren. Av det intresset växte idén om att starta ett eget
+              Vi är två unga entreprenörer som gillar bilar – hur de ser ut, hur de känns och hur skönt det är att
+              sätta sig i en bil som är riktigt ren. Av det intresset växte idén om att starta ett eget
               bilvårdsföretag.
             </p>
             <p>
-              Med EA Auto Detail vill vi erbjuda bilvård som är noggrann men inte dyr. Vi tycker att alla ska ha råd
-              att få bilen ordentligt omhändertagen, oavsett om det är familjens vardagsbil eller en bil man har lagt
-              ner sin själ i.
+              Med {site.name} vill vi erbjuda bilvård som är noggrann men inte dyr, oavsett om det är familjens
+              vardagsbil eller en bil man har lagt ner sin själ i.
             </p>
             <p>
-              Vi är ett litet företag och bygger det steg för steg, med hårt arbete och ett jobb i taget. Därför är
-              varje nöjd kund viktig för oss. Är du nöjd blir vi glada om du berättar det för någon du känner eller
-              taggar oss i sociala medier.
+              Vi utgår från {site.baseTown} och jobbar {site.hours.days.toLowerCase()} i veckan ({hours.text} just nu).
+              Antingen kommer vi till dig och tvättar bilen där den står, eller så hämtar vi bilen, gör jobbet hos oss
+              och lämnar tillbaka den.
+            </p>
+            <p>
+              Vi är ett litet företag och bygger det steg för steg, ett jobb i taget. Är du nöjd blir vi glada om du
+              berättar det för någon du känner eller taggar oss i sociala medier.
             </p>
             {site.showPlaceholders && (
               <Placeholder>
-                Lägg gärna till era förnamn, hur ni träffades, sedan när ni driver företaget och var ni utgår ifrån.
+                Lägg gärna till era förnamn, hur ni träffades och sedan när ni driver företaget.
               </Placeholder>
             )}
           </div>
           <div className="reveal">
             <div className="grain relative grid aspect-[4/5] place-items-center overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(ellipse_at_60%_20%,#34353a_0%,#131416_60%)]">
-              <span className="font-display text-[8rem] font-black italic leading-none tracking-tighter text-white/10">EA</span>
+              <span aria-hidden="true" className="font-display text-[8rem] font-black italic leading-none tracking-tighter text-white/10">
+                EA
+              </span>
               {site.showPlaceholders && (
                 <span className="absolute inset-x-6 bottom-6">
-                  <Placeholder>Byt mot ett foto på er två (lägg bilden i /public och uppdatera sidan).</Placeholder>
+                  <Placeholder>Plats för ett foto på er två (se BILDER.md).</Placeholder>
                 </span>
               )}
             </div>

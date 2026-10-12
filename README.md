@@ -1,7 +1,7 @@
 # EA Auto Detail – website
 
 Swedish-language website for EA Auto Detail, built with **Next.js 16 (App Router) + TypeScript + Tailwind CSS 4**.
-No paid services and no extra runtime dependencies beyond Next.js/React.
+No paid services required. The only runtime dependency besides Next.js/React is `nodemailer` (for sending e-mail via SMTP, e.g. Gmail).
 
 ## Pages
 
@@ -16,7 +16,9 @@ No paid services and no extra runtime dependencies beyond Next.js/React.
 | `/kontakt` | Contact details, social links, booking CTA |
 | `/integritet` | Privacy policy **template** – review before publishing |
 | `/sitemap.xml`, `/robots.txt`, `/opengraph-image`, `/llms.txt` | SEO, social sharing image, machine-readable summary for AI tools |
-| `POST /api/booking` | Receives booking requests and forwards them (see below) |
+| `POST /api/booking` | Receives booking requests, notifies the business and sends the customer a receipt (see below) |
+| `/hantera` | **Internal** page for the owners to confirm a request (opened from the link in the booking e-mail; noindex, not in nav/sitemap, blocked in robots.txt) |
+| `POST /api/booking/open`, `POST /api/booking/confirm` | Used by `/hantera`: open a sealed booking link, send the confirmation e-mail |
 
 ## Run locally
 
@@ -65,28 +67,118 @@ Everything business-related lives in **`src/config/site.ts`**:
 The current gallery images and the hero graphic are drawn placeholders. They are labelled as examples on the site and are
 not presented as customer work.
 
-## Booking form → how requests reach you
+## Booking requests and e-mail
 
-The form validates in the browser **and** on the server (`src/lib/booking.ts`), compresses attached photos in the
-browser, and posts to `/api/booking`. The API forwards the request to whichever channels are configured:
+### The flow
 
-| Option | Env vars | What you get |
-| --- | --- | --- |
-| **A. E-mail via Resend** (recommended) | `RESEND_API_KEY`, `BOOKING_EMAIL_TO`, `BOOKING_EMAIL_FROM` | An e-mail per request with a summary and the photos attached. Reply-to is set when the customer chose e-mail. |
-| **B. Webhook** | `BOOKING_WEBHOOK_URL` (+ optional `BOOKING_WEBHOOK_SECRET`) | A JSON `POST` (`type`, `status: "unconfirmed"`, `reference`, `customer`, `vehicle`, `service`, `arrangement`, `location`, `preferredDate`, `preferredTime`, `estimatedTotal`, `message`, `summary`, `photos[]` as base64). Works with Make, Zapier, n8n or a Google Apps Script that appends to a Google Sheet. |
+1. **Customer** fills in `/boka`. Fields are validated in the browser and again on the server (`src/lib/booking.ts`);
+   photos are compressed in the browser and posted with the form to `POST /api/booking`.
+2. **You are notified** by e-mail (summary + photos attached, *Reply-To* = the customer) and/or by webhook. If no channel
+   is configured the API answers 503 and the form says so plainly – no fake confirmations.
+3. **The customer gets an automatic receipt** (“Vi har tagit emot din bokningsförfrågan”). It says clearly that the
+   time is **not confirmed yet**, and contains the reference, service and price, travel fee (or “bekräftas av oss” when
+   the customer chose *Vet inte*), arrangement, address, wished date/time, “Vi återkommer så snabbt vi kan – alltid inom
+   24 timmar.”, what is needed on site (mobile service) or the pickup note, payment (Swish/kontanter, on site after the
+   job) and your phone number and social links. It is only sent when customer e-mail is possible (see table); if it
+   fails, the request still succeeds (`customerEmailSent: false`).
+4. **You confirm the time.** The e-mail you receive has a button *“Bekräfta tid och skicka bekräftelse”*. It opens
+   `/hantera`, which shows the request and a short form (date, time, total price – prefilled from the request – and an
+   optional message). Sending it e-mails the customer **“Din tid är bekräftad: …”** with *Reply-To* set to you and a
+   hidden copy (Bcc) to your inbox, which is your record of what was sent.
 
-You can configure both. **If neither is configured, the API answers 503 and the form tells the visitor plainly that the
-request could not be sent** (and shows the contact details). No fake confirmations are ever shown. On success the
-visitor sees a reference number and an explicit "this is not a confirmed booking yet" message.
+There is **no database and no automatic calendar**: the site does not check availability or block times. A request is
+only a request until you confirm it, by e-mail from `/hantera` or by phone/SMS.
 
-Simplest setup for Resend (no own domain needed yet): sign up at resend.com **with eaautodetail2026@gmail.com**, create
-an API key, then set `RESEND_API_KEY=<key>`, `BOOKING_EMAIL_TO=eaautodetail2026@gmail.com` and
-`BOOKING_EMAIL_FROM="EA Auto Detail <onboarding@resend.dev>"`. Resend's test sender may only deliver to the account's own
-address, which is exactly what we need. Once you have a domain, verify it in Resend and switch the sender to e.g.
-`bokning@yourdomain.se`.
+All texts come from `src/config/site.ts` (prices, travel fees, payment, on-site needs, response time, contact, social
+links). The e-mail templates are in `src/lib/email-templates.ts`.
 
-Privacy: the server never stores or logs customer data; only technical delivery errors are logged. A honeypot field and a
-simple per-IP rate limit (8 requests / 10 min) reduce spam.
+### What each feature needs
+
+| | Gmail via SMTP (app password) | Resend, test sender `onboarding@resend.dev` | Resend, own verified domain | Webhook only |
+| --- | --- | --- | --- | --- |
+| E-mail to you about each request | yes | yes | yes | no (JSON to the webhook instead) |
+| Automatic receipt to the customer | yes | **no** (Resend's test sender can only deliver to the account owner) | yes | no |
+| Confirmation e-mail from `/hantera` | yes | **no** – the page says so and shows the customer's phone number | yes | no (no link is sent) |
+
+**In short: the customer receipt and the confirmation e-mail need SMTP (a Gmail app password) or a verified own domain
+in Resend.** If both SMTP and Resend are configured, SMTP is used.
+
+### Option A (recommended): Gmail with an app password
+
+Free, no domain needed, and it can e-mail customers.
+
+1. Turn on **2-Step Verification** for the Google account `eaautodetail2026@gmail.com`
+   (myaccount.google.com/security). App passwords can't be created without it.
+2. Create an app password at **myaccount.google.com/apppasswords** (name it e.g. “Hemsida”). Google shows a
+   16-character password once.
+3. Set `SMTP_USER=eaautodetail2026@gmail.com` and `SMTP_PASS=<the app password>` (spaces don't matter). Never use the
+   account's normal password.
+4. Optional: `BOOKING_EMAIL_TO` (defaults to `SMTP_USER`; comma-separate several addresses) and `BOOKING_SECRET` (see below).
+
+Defaults are `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, TLS (`SMTP_SECURE=true`); set them only for another provider
+(port 587 uses STARTTLS, which is then required). E-mails are sent from `EA Auto Detail <SMTP_USER>`; a
+`BOOKING_EMAIL_FROM` is used instead only if it isn't an `@resend.dev` address (Gmail may still rewrite it to the
+account's own address). Sent mails show up in the account's *Sent* folder. Revoking the app password stops all e-mail
+until a new one is set. If your host blocks outgoing SMTP, use Resend with your own domain instead.
+
+### Option B: Resend
+
+Used only when `SMTP_USER`/`SMTP_PASS` are not both set. Needs `RESEND_API_KEY`, `BOOKING_EMAIL_FROM` and (for
+e-mails to you) `BOOKING_EMAIL_TO`.
+
+- **Test sender, no domain:** sign up at resend.com with `eaautodetail2026@gmail.com`, then
+  `BOOKING_EMAIL_FROM="EA Auto Detail <onboarding@resend.dev>"` and `BOOKING_EMAIL_TO=eaautodetail2026@gmail.com`. You get
+  the requests, but customers get **no receipt and no confirmation** e-mail.
+- **Own domain:** verify the domain in Resend and set e.g. `BOOKING_EMAIL_FROM="EA Auto Detail <bokning@yourdomain.se>"`.
+  Then customer e-mails work too.
+
+### Confirmation links (`/hantera`) and `BOOKING_SECRET`
+
+The link in your e-mail looks like `https://<site>/hantera#t=v1.…`. The part after `t=` is a **sealed token**: the
+request's details (reference, name, e-mail, phone, vehicle, service, arrangement, address, travel zone, wished date/time,
+quoted price, issued-at) encrypted with **AES-256-GCM**. It can't be read or changed without the key, and it expires
+after **60 days**.
+
+- The key is derived with HKDF-SHA256 from `BOOKING_SECRET`. If that is empty it is derived from `SMTP_PASS` or
+  `RESEND_API_KEY` (each with its own HKDF label), so links work as soon as e-mail works. **Set `BOOKING_SECRET`**
+  (e.g. `openssl rand -base64 32`) so that changing the app password or API key doesn't break links. Links created before
+  you add `BOOKING_SECRET` keep working as long as the old password/key is unchanged. Changing `BOOKING_SECRET` breaks
+  the links created with it.
+- The token sits in the URL **fragment** (`#…`), which browsers never send to the server, so it doesn't end up in
+  server or proxy logs. The page posts it in a request body to `/api/booking/open` and `/api/booking/confirm`, which
+  re-validate it every time.
+- Anyone with the link can see that request and send the confirmation to that customer: **don't forward the
+  e-mail.** The link is intentionally not included in the webhook payload. The links use `NEXT_PUBLIC_SITE_URL` when it is
+  an https address (otherwise the address the request came in on), so set it before launch.
+- Nothing is stored, so the page can't tell whether a request was already confirmed. Your Bcc copy is the record;
+  sending again sends the customer a new confirmation (useful if the time changes).
+- `/hantera` is `noindex`, has a `no-referrer` referrer policy, is disallowed in `robots.txt` and is not linked anywhere.
+
+### Webhook
+
+`BOOKING_WEBHOOK_URL` (+ optional `BOOKING_WEBHOOK_SECRET`, sent as `X-Webhook-Secret`) receives a JSON `POST` per
+request: `type: "booking_request"`, `status: "unconfirmed"`, `reference`, `receivedAt`,
+`customer {name, phone, email}`, `vehicle`, `service {id, name, price}`, `arrangement {id, label}`, `address`,
+`travel {zone, label, fee}` (`fee: null` = to be confirmed), `preferredDate`, `preferredTime`, `estimatedTotal`,
+`feeConfirmed`, `currency`, `message`, `summary` (plain text) and `photos[]` (base64). Works with Make, Zapier, n8n or a
+Google Apps Script that appends to a Google Sheet. It can be used instead of, or together with, e-mail.
+
+### API responses (`POST /api/booking`)
+
+Success: `200 {ok: true, reference, customerEmailSent}`. Errors: `{ok: false, code, message, errors?}` with
+`422 validation`, `503 not_configured`, `502 delivery_failed` (no channel to you worked), `429 rate_limited`,
+`400 bad_request | rejected`.
+
+### Privacy and abuse protection
+
+- The server never stores or logs customer data. Only short technical error codes are logged
+  (e.g. `[booking] … EAUTH SMTP 535` = wrong app password, `Resend svarade 403`).
+- Honeypot field, plus simple per-IP rate limits per server instance: 8 requests / 10 min for bookings, 30 for opening
+  a link, 10 for sending confirmations.
+- The receipt only contains what the customer entered in fixed fields (not the free-text message), and it is only sent
+  to addresses that pass a strict check (no lists or display-name tricks). It ends with “if this wasn't you, ignore this
+  e-mail”.
+- User input is HTML-escaped in every e-mail; attachments are always sent as data (nodemailer file/URL access is off).
 
 ## Analytics
 
@@ -128,4 +220,8 @@ under Vercel's request size limit.
 - Keyboard: skip link, mobile menu (focus trap, Escape closes, closes on navigation), gallery filter, before/after slider.
 - Booking form: client validation and error summary, server validation (via direct API calls), honeypot,
   "not configured" path, and a full successful submission with a photo to a local mock webhook.
-- **Not tested:** real e-mail delivery through Resend (no account/API key available), and a real deployment.
+- Booking e-mail flow (receipt, `/hantera`, confirmation): the API routes were exercised end to end through `next dev`
+  against a local SMTP test server via nodemailer, plus unit tests of the sealed token (round trip, tampering, expiry),
+  the e-mail templates (escaping, content) and the `/hantera` page logic (jsdom).
+- **Not tested:** delivery through the real Gmail SMTP server or Resend (no credentials available), and a real deployment.
+  Send yourself one test booking after setting the variables.
