@@ -85,7 +85,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
   }, [photos]);
   useEffect(() => () => photosRef.current.forEach((p) => URL.revokeObjectURL(p.url)), []);
 
-  const price = priceSummary(values.service, values.arrangement);
+  const price = priceSummary(values.service, values.arrangement, values.travelZone);
   const method = site.contactMethods.find((m) => m.id === values.contactMethod) ?? site.contactMethods[0];
   const fieldId = (f: string) => `${formId}-${f}`;
   const showError = (f: BookingField) => (submitted || touched[f]) && errors[f];
@@ -96,7 +96,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
     if (submitted || touched[field]) {
       const nextErrors = { ...errors };
       for (const f of fieldOrder) {
-        if (f === field || f === "location" || f === "contactValue") {
+        if (f === field || f === "location" || f === "travelZone" || f === "contactValue") {
           const e = validateField(f, next, today || todayInSweden());
           if (e && (submitted || touched[f])) nextErrors[f] = e;
           else delete nextErrors[f];
@@ -291,7 +291,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                 onChange={() => update("arrangement", a.id)}
                 title={a.label}
                 description={a.description}
-                meta={a.feeApplies ? `+${formatSEK(site.mobileFee)}` : "Enligt överenskommelse"}
+                meta={a.feeApplies ? `Reseavgift från ${formatSEK(site.travelFeeFrom)}` : "Enligt överenskommelse"}
                 invalid={!!showError("arrangement")}
               />
             ))}
@@ -303,15 +303,51 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
               <TextField
                 id={fieldId("location")}
                 name="location"
-                label={locationRequired(values.arrangement) ? "Ungefär var finns bilen? *" : "Ungefär var finns bilen?"}
-                hint="Ort eller område räcker – exakt adress tar vi när vi bekräftar."
+                label={locationRequired(values.arrangement) ? "Adress där bilen står *" : "Var finns bilen?"}
+                hint={
+                  locationRequired(values.arrangement)
+                    ? "Gatuadress och ort. Vi använder den för att planera besöket och bekräfta reseavgiften."
+                    : "Ort eller område räcker."
+                }
                 value={values.location}
                 onChange={(v) => update("location", v)}
                 onBlur={() => blur("location")}
                 error={showError("location")}
-                autoComplete="address-level2"
+                autoComplete={locationRequired(values.arrangement) ? "street-address" : "address-level2"}
                 maxLength={120}
               />
+            </div>
+          )}
+
+          {locationRequired(values.arrangement) && (
+            <div
+              role="radiogroup"
+              aria-labelledby={`${fieldId("travelZone")}-label`}
+              aria-describedby={showError("travelZone") ? `${fieldId("travelZone")}-err` : `${fieldId("travelZone")}-hint`}
+              className="mt-5"
+            >
+              <p id={`${fieldId("travelZone")}-label`} className="text-sm font-semibold text-white">
+                Hur långt från {site.baseTown} står bilen? *
+              </p>
+              <p id={`${fieldId("travelZone")}-hint`} className="mt-1 text-sm text-mist-400">
+                Reseavgiften tillkommer utöver tjänsten. Vi dubbelkollar den mot adressen innan vi bekräftar.
+              </p>
+              <div className="mt-3 grid scroll-mt-32 gap-3 sm:grid-cols-3" id={fieldId("travelZone")} tabIndex={-1}>
+                {site.travelZones.map((z) => (
+                  <OptionCard
+                    key={z.id}
+                    name="travelZone"
+                    value={z.id}
+                    checked={values.travelZone === z.id}
+                    onChange={() => update("travelZone", z.id)}
+                    title={z.label}
+                    description={z.description}
+                    meta={z.fee != null ? `+${formatSEK(z.fee)}` : "Bekräftas av oss"}
+                    invalid={!!showError("travelZone")}
+                  />
+                ))}
+              </div>
+              <FieldError id={`${fieldId("travelZone")}-err`} message={showError("travelZone")} />
             </div>
           )}
         </fieldset>
@@ -560,21 +596,41 @@ function PriceSummary({ price }: { price: ReturnType<typeof priceSummary> }) {
         <div className="flex justify-between gap-4">
           <dt className="text-mist-300">
             {price.arrangement ? price.arrangement.label : "Upplägg ej valt"}
-            {price.arrangement?.feeApplies && <span className="block text-xs text-mist-400">Mobil serviceavgift</span>}
+            {price.arrangement?.feeApplies && (
+              <span className="block text-xs text-mist-400">Reseavgift{price.zone ? ` · ${price.zone.label}` : ""}</span>
+            )}
           </dt>
           <dd className="shrink-0 font-semibold text-white">
-            {!price.arrangement ? "–" : price.arrangement.feeApplies ? `+${formatSEK(price.fee)}` : "Enl. överensk."}
+            {!price.arrangement
+              ? "–"
+              : !price.arrangement.feeApplies
+                ? "Enl. överensk."
+                : price.feeKnown
+                  ? `+${formatSEK(price.fee)}`
+                  : price.zone
+                    ? "Bekräftas"
+                    : "Välj avstånd"}
           </dd>
         </div>
         <div className="flex items-baseline justify-between gap-4 border-t border-white/10 pt-3">
           <dt className="font-semibold text-white">Preliminärt pris</dt>
           <dd className="font-display text-2xl font-extrabold text-white">
             {price.service ? formatSEK(price.total) : "–"}
+            {price.service && price.arrangement?.feeApplies && !price.feeKnown && (
+              <span className="block text-right text-xs font-semibold text-mist-400">+ reseavgift</span>
+            )}
           </dd>
         </div>
       </dl>
       <ul className="mt-5 space-y-2 border-t border-white/10 pt-4 text-xs leading-relaxed text-mist-400">
-        <li>Mobil serviceavgift ({formatSEK(site.mobileFee)}) gäller när vi åker till dig eller hämtar och lämnar bilen.</li>
+        <li>
+          Reseavgift när vi åker till dig eller hämtar och lämnar bilen:{" "}
+          {site.travelZones
+            .filter((z) => z.fee != null)
+            .map((z) => `${formatSEK(z.fee!)} ${z.label.charAt(0).toLowerCase()}${z.label.slice(1)}`)
+            .join(", ")}
+          .
+        </li>
         {price.arrangement?.id === "other" && <li>Vid annat upplägg kommer vi överens om villkoren innan bokningen bekräftas.</li>}
         <li>Extra smutsig bil eller extra arbete kan kosta mer – du får alltid ett prisförslag att godkänna innan vi börjar.</li>
         <li>Priset bekräftas när vi har gått igenom förfrågan.</li>

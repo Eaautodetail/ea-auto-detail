@@ -16,7 +16,10 @@ export function GET() {
     ...site.services.map((s) => `- ${s.name}: ${formatSEK(s.price)} – ${s.summary}`),
     "",
     "## Villkor",
-    `- Mobil serviceavgift: ${formatSEK(site.mobileFee)} när vi åker till kunden eller hämtar och lämnar bilen.`,
+    `- Reseavgift när vi åker till kunden eller hämtar och lämnar bilen: ${site.travelZones
+      .filter((z) => z.fee != null)
+      .map((z) => `${formatSEK(z.fee!)} (${z.label.toLowerCase()})`)
+      .join(", ")}.`,
     "- Extra smutsiga bilar eller extra arbete kan kosta mer. Kunden får ett prisförslag och måste godkänna det innan extraarbetet påbörjas.",
     "- Bokningar görs som förfrågan via webbplatsen och gäller först när EA Auto Detail har bekräftat tid och pris.",
     "- Vi erbjuder inte lackkorrigering eller maskinpolering.",

@@ -81,19 +81,26 @@ function ServiceCard({ service, headingLevel: H }: { service: Service; headingLe
   );
 }
 
-/** Villkor kring mobil serviceavgift och extraarbete – visas nära priserna. */
+/** Villkor kring reseavgift och extraarbete – visas nära priserna. */
 export function PricingTerms({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`reveal grid gap-4 ${compact ? "" : "md:grid-cols-2"}`}>
       <div className="rounded-2xl border border-white/10 bg-ink-900 p-6">
-        <p className="flex items-baseline justify-between gap-4">
-          <span className="font-display text-lg font-bold text-white">Mobil serviceavgift</span>
-          <span className="font-display text-lg font-bold text-white">+{formatSEK(site.mobileFee)}</span>
-        </p>
-        <p className="mt-2 text-sm leading-relaxed text-mist-300">
+        <p className="font-display text-lg font-bold text-white">Reseavgift</p>
+        <dl className="mt-3 space-y-1.5 text-sm">
+          {site.travelZones
+            .filter((z) => z.fee != null)
+            .map((z) => (
+              <div key={z.id} className="flex items-baseline justify-between gap-4">
+                <dt className="text-mist-200">{z.label}</dt>
+                <dd className="shrink-0 font-display font-bold text-white">+{formatSEK(z.fee!)}</dd>
+              </div>
+            ))}
+        </dl>
+        <p className="mt-3 text-sm leading-relaxed text-mist-300">
           Tillkommer när vi <strong className="font-semibold text-white">åker till dig</strong> eller{" "}
-          <strong className="font-semibold text-white">hämtar och lämnar bilen</strong>. Väljer du ett annat upplägg
-          kommer vi överens om villkoren innan bokningen bekräftas.
+          <strong className="font-semibold text-white">hämtar och lämnar bilen</strong>. Vi bekräftar avgiften utifrån
+          din adress innan bokningen är klar.
         </p>
       </div>
       <div className="rounded-2xl border border-white/10 bg-ink-900 p-6">

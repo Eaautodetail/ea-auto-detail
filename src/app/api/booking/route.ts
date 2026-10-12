@@ -71,7 +71,11 @@ async function sendEmail(fields: BookingFields, text: string, reference: string,
 }
 
 async function sendWebhook(fields: BookingFields, text: string, reference: string, photos: Photo[]) {
-  const { service, arrangement, base, fee, total } = priceSummary(fields.service, fields.arrangement);
+  const { service, arrangement, zone, base, feeKnown, total } = priceSummary(
+    fields.service,
+    fields.arrangement,
+    fields.travelZone,
+  );
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (process.env.BOOKING_WEBHOOK_SECRET) headers["X-Webhook-Secret"] = process.env.BOOKING_WEBHOOK_SECRET;
   const res = await fetch(process.env.BOOKING_WEBHOOK_URL!, {
@@ -85,11 +89,13 @@ async function sendWebhook(fields: BookingFields, text: string, reference: strin
       customer: { name: fields.name, contactMethod: fields.contactMethod, contact: fields.contactValue },
       vehicle: fields.vehicle,
       service: { id: service?.id, name: service?.name, price: base },
-      arrangement: { id: arrangement?.id, label: arrangement?.label, mobileFee: fee },
-      location: fields.location || null,
+      arrangement: { id: arrangement?.id, label: arrangement?.label },
+      address: fields.location || null,
+      travel: arrangement?.feeApplies ? { zone: zone?.id ?? null, label: zone?.label ?? null, fee: zone?.fee ?? null } : null,
       preferredDate: fields.date,
       preferredTime: fields.timeWindow,
       estimatedTotal: total,
+      feeConfirmed: feeKnown,
       currency: "SEK",
       message: fields.message || null,
       summary: text,

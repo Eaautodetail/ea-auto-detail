@@ -15,7 +15,8 @@ import { formatSEK } from "@/lib/format";
 
 /** Priser i hela kronor (SEK). Ändra här så uppdateras hela sajten. */
 const PRICE = { exterior: 149, interior: 249, complete: 349 } as const;
-const MOBILE_FEE = 150;
+/** Reseavgift i SEK när vi åker till kunden eller hämtar och lämnar bilen. */
+const TRAVEL_FEE = { near: 150, ahus: 250 } as const;
 
 export type ServiceId = "exterior" | "interior" | "complete";
 
@@ -38,6 +39,14 @@ export type Service = {
 };
 
 export type Arrangement = "visit" | "pickup" | "other";
+
+export type TravelZone = {
+  id: string;
+  label: string;
+  description: string;
+  /** `null` = avgiften bekräftas manuellt utifrån adressen. */
+  fee: number | null;
+};
 
 export type GalleryItem = {
   id: string;
@@ -66,7 +75,11 @@ export type Faq = {
 export const site = {
   name: "EA Auto Detail",
   /** Används för sitemap, delningslänkar m.m. Sätts via NEXT_PUBLIC_SITE_URL. */
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  url:
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}`
+      : "http://localhost:3000"),
   locale: "sv-SE",
   currency: "SEK",
   showPlaceholders: true,
@@ -83,24 +96,53 @@ export const site = {
 
   contact: {
     /** Telefonnummer i format för visning, t.ex. "070-123 45 67". */
-    phone: null as string | null,
+    phone: "072-350 48 05" as string | null,
     /** Samma nummer i internationellt format för länkar, t.ex. "+46701234567". */
-    phoneHref: null as string | null,
+    phoneHref: "+46723504805" as string | null,
     email: "eaautodetail2026@gmail.com" as string | null,
     /** Område vi utgår från / åker till, t.ex. "Västerås med omnejd". */
-    serviceArea: null as string | null,
+    serviceArea: "Kristianstad med omnejd, upp till Åhus" as string | null,
     /** Svarstider eller tider vi tar emot bokningar, t.ex. "Vardagar 16–20". */
     availability: null as string | null,
   },
 
   social: {
-    tiktok: null as string | null,
-    instagram: null as string | null,
-    facebook: null as string | null,
+    tiktok: "https://www.tiktok.com/@eaautodetail3" as string | null,
+    instagram: "https://www.instagram.com/eaautodetail_/" as string | null,
+    facebook: "https://www.facebook.com/share/1DJVY9R1bx/" as string | null,
   },
 
-  /** Mobil serviceavgift i SEK när vi åker till kunden eller hämtar/lämnar bilen. */
-  mobileFee: MOBILE_FEE,
+  /** Vi utgår från den här orten. */
+  baseTown: "Kristianstad",
+
+  /**
+   * Reseavgift som tillkommer när vi åker till kunden eller hämtar och lämnar
+   * bilen. Kunden väljer zon i bokningen och vi bekräftar avgiften utifrån
+   * adressen innan bokningen är spikad.
+   */
+  travelZones: [
+    {
+      id: "near",
+      label: "Inom ca 5 km från Kristianstad",
+      description: "T.ex. centrala Kristianstad med närområde.",
+      fee: TRAVEL_FEE.near,
+    },
+    {
+      id: "ahus",
+      label: "Längre än 5 km, upp till Åhus",
+      description: "Mellan ca 5 km från Kristianstad och Åhus.",
+      fee: TRAVEL_FEE.ahus,
+    },
+    {
+      id: "unsure",
+      label: "Vet inte",
+      description: "Vi kollar adressen och bekräftar avgiften.",
+      fee: null,
+    },
+  ] satisfies TravelZone[] as TravelZone[],
+
+  /** Lägsta reseavgiften, för texter som "från 150 kr". */
+  travelFeeFrom: TRAVEL_FEE.near,
 
   services: [
     {
@@ -145,13 +187,13 @@ export const site = {
     {
       id: "visit",
       label: "Ni kommer till mig",
-      description: "Vi utför jobbet där bilen står.",
+      description: "Vi tvättar bilen där den står.",
       feeApplies: true,
     },
     {
       id: "pickup",
       label: "Hämtning och lämning",
-      description: "Vi hämtar bilen och lämnar tillbaka den när den är klar.",
+      description: "Vi hämtar bilen, gör jobbet hos oss och lämnar tillbaka den.",
       feeApplies: true,
     },
     {
@@ -235,7 +277,7 @@ export const site = {
       id: "mobil-service",
       question: "Hur fungerar mobil service?",
       answer:
-        `Vi kan komma till dig och göra jobbet där bilen står. När vi åker ut till dig tillkommer en mobil serviceavgift på ${formatSEK(MOBILE_FEE)}. Skriv ungefär var bilen står i bokningsförfrågan så återkommer vi och bekräftar.`,
+        `Vi kommer till dig och tvättar bilen där den står. Då tillkommer en reseavgift: ${formatSEK(TRAVEL_FEE.near)} inom ca 5 km från Kristianstad och ${formatSEK(TRAVEL_FEE.ahus)} längre bort, upp till Åhus. Skriv adressen i bokningsförfrågan så bekräftar vi avgiften.`,
     },
     {
       id: "mobil-krav",
@@ -247,7 +289,7 @@ export const site = {
       id: "hamtning",
       question: "Hur fungerar hämtning och lämning?",
       answer:
-        `Om det passar dig bättre kan vi hämta bilen och lämna tillbaka den när den är klar. Då tillkommer den mobila serviceavgiften på ${formatSEK(MOBILE_FEE)}. Vi kommer överens om tider och nyckelöverlämning när vi bekräftar bokningen.`,
+        `Om det passar dig bättre hämtar vi bilen, gör jobbet hos oss och lämnar tillbaka den när den är klar. Samma reseavgift gäller som vid mobil bilvård: ${formatSEK(TRAVEL_FEE.near)} inom ca 5 km från Kristianstad och ${formatSEK(TRAVEL_FEE.ahus)} upp till Åhus. Tider och nyckelöverlämning bestämmer vi när vi bekräftar bokningen.`,
     },
     {
       id: "extra-smutsig",
@@ -271,13 +313,13 @@ export const site = {
       id: "kontakt",
       question: "Hur kontaktar jag er?",
       answer:
-        "Enklast är att skicka en bokningsförfrågan, så återkommer vi på det sätt du föredrar. Du kan också nå oss via våra sociala medier.",
+        "Ring eller sms:a oss på 072-350 48 05, skriv till oss på Instagram, Facebook eller TikTok, eller skicka en bokningsförfrågan här på sidan.",
     },
     {
       id: "omrade",
       question: "Vilka områden åker ni till?",
-      answer: null,
-      placeholderHint: "Ange ert serviceområde (orter/kommuner) och om det finns någon gräns för hur långt ni åker.",
+      answer:
+        `Vi utgår från Kristianstad och åker upp till Åhus. Inom ca 5 km från Kristianstad är reseavgiften ${formatSEK(TRAVEL_FEE.near)} och längre bort, upp till Åhus, ${formatSEK(TRAVEL_FEE.ahus)}.`,
     },
   ] satisfies Faq[] as Faq[],
 };
@@ -286,6 +328,10 @@ export type Site = typeof site;
 
 export function getService(id: string | null | undefined): Service | undefined {
   return site.services.find((s) => s.id === id);
+}
+
+export function getTravelZone(id: string | null | undefined) {
+  return site.travelZones.find((z) => z.id === id);
 }
 
 export function getArrangement(id: string | null | undefined) {

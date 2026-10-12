@@ -44,7 +44,7 @@ export default function ServicesPage() {
               <tr>
                 <th scope="col" className="px-5 py-4 font-semibold">Tjänst</th>
                 <th scope="col" className="px-5 py-4 font-semibold">Grundpris</th>
-                <th scope="col" className="hidden px-5 py-4 font-semibold sm:table-cell">Vi kommer till dig / hämtar och lämnar</th>
+                <th scope="col" className="hidden px-5 py-4 font-semibold sm:table-cell">Med reseavgift (inom 5 km / upp till Åhus)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10 bg-ink-850">
@@ -53,8 +53,10 @@ export default function ServicesPage() {
                   <th scope="row" className="px-5 py-4 font-semibold text-white">{s.name}</th>
                   <td className="px-5 py-4 text-mist-200">{formatSEK(s.price)}</td>
                   <td className="hidden px-5 py-4 text-mist-200 sm:table-cell">
-                    {formatSEK(s.price + site.mobileFee)}{" "}
-                    <span className="text-mist-400">({formatSEK(s.price)} + {formatSEK(site.mobileFee)})</span>
+                    {site.travelZones
+                      .filter((z) => z.fee != null)
+                      .map((z) => formatSEK(s.price + z.fee!))
+                      .join(" / ")}
                   </td>
                 </tr>
               ))}

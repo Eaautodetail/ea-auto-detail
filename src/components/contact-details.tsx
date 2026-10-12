@@ -23,6 +23,20 @@ export function ContactDetails() {
       hint: "Telefonnummer",
     },
     {
+      label: "SMS",
+      value: phone ? (
+        <TrackedAnchor
+          href={`sms:${phoneHref ?? phone.replace(/[^\d+]/g, "")}`}
+          event="contact_click"
+          eventProps={{ method: "sms" }}
+          className="underline decoration-white/30 underline-offset-4 hover:decoration-white"
+        >
+          Skicka sms
+        </TrackedAnchor>
+      ) : null,
+      hint: "Mobilnummer för sms",
+    },
+    {
       label: "E-post",
       value: email ? (
         <TrackedAnchor

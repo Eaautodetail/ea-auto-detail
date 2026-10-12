@@ -2,7 +2,7 @@
  * Gemensam validering för bokningsförfrågan. Används både i formuläret
  * (direkt feedback) och i API-routen (servern litar aldrig på klienten).
  */
-import { getArrangement, getService, site } from "@/config/site";
+import { getArrangement, getService, getTravelZone, site } from "@/config/site";
 
 export const PHOTO_LIMITS = {
   maxFiles: 5,
@@ -23,6 +23,7 @@ export type BookingFields = {
   timeWindow: string;
   arrangement: string;
   location: string;
+  travelZone: string;
   message: string;
   consent: string;
 };
@@ -40,6 +41,7 @@ export const emptyBooking: BookingFields = {
   timeWindow: "",
   arrangement: "",
   location: "",
+  travelZone: "",
   message: "",
   consent: "",
 };
@@ -107,8 +109,11 @@ export function validateField(field: BookingField, v: BookingFields, today: stri
       if (!getArrangement(value)) return "Välj hur vi ska göra med bilen.";
       return;
     case "location":
-      if (locationRequired(v.arrangement) && value.length < 2) return "Skriv ungefär var bilen finns, t.ex. ort eller område.";
-      if (value.length > 120) return "För långt – det räcker med ort eller område.";
+      if (locationRequired(v.arrangement) && value.length < 5) return "Skriv adressen där bilen står, t.ex. Storgatan 1, Kristianstad.";
+      if (value.length > 120) return "Adressen är för lång.";
+      return;
+    case "travelZone":
+      if (locationRequired(v.arrangement) && !getTravelZone(value)) return "Välj ungefär hur långt bort bilen står.";
       return;
     case "message":
       if (value.length > 1500) return "Meddelandet får vara högst 1 500 tecken.";
@@ -123,6 +128,7 @@ export const fieldOrder: BookingField[] = [
   "service",
   "arrangement",
   "location",
+  "travelZone",
   "date",
   "timeWindow",
   "vehicle",
@@ -151,24 +157,30 @@ export function validatePhotos(files: { size: number; type: string }[]): string 
     return "Bilderna är för stora tillsammans. Ta bort någon bild och försök igen.";
 }
 
-/** Prisöversikt för vald tjänst och upplägg. */
-export function priceSummary(serviceId: string, arrangementId: string) {
+/**
+ * Prisöversikt för vald tjänst, upplägg och resezon.
+ * `feeKnown` är `false` när reseavgiften inte kan räknas ut ännu (zon ej vald,
+ * "vet inte" eller annat upplägg) – då bekräftar vi den manuellt.
+ */
+export function priceSummary(serviceId: string, arrangementId: string, travelZoneId = "") {
   const service = getService(serviceId);
   const arrangement = getArrangement(arrangementId);
-  const fee = arrangement?.feeApplies ? site.mobileFee : 0;
+  const zone = arrangement?.feeApplies ? getTravelZone(travelZoneId) : undefined;
+  const fee = zone?.fee ?? 0;
   return {
     service,
     arrangement,
+    zone,
     base: service?.price ?? 0,
     fee,
-    feeKnown: !!arrangement && arrangement.id !== "other",
+    feeKnown: !!arrangement && (!arrangement.feeApplies || zone?.fee != null),
     total: (service?.price ?? 0) + fee,
   };
 }
 
 /** Bygger en läsbar textsammanfattning av förfrågan (för e-post/webhook). */
 export function bookingAsText(v: BookingFields, reference: string, photoCount: number) {
-  const { service, arrangement, base, fee, total } = priceSummary(v.service, v.arrangement);
+  const { service, arrangement, zone, base, fee, feeKnown, total } = priceSummary(v.service, v.arrangement, v.travelZone);
   const method = site.contactMethods.find((m) => m.id === v.contactMethod);
   const kr = (n: number) => `${n} kr`;
   return [
@@ -179,10 +191,13 @@ export function bookingAsText(v: BookingFields, reference: string, photoCount: n
     `Kontakt: ${method?.label ?? v.contactMethod} – ${v.contactValue}`,
     `Bil: ${v.vehicle}`,
     `Tjänst: ${service?.name ?? v.service} (${kr(base)})`,
-    `Upplägg: ${arrangement?.label ?? v.arrangement}${fee ? ` (+${kr(fee)} mobil serviceavgift)` : ""}`,
-    `Område: ${v.location || "–"}`,
+    `Upplägg: ${arrangement?.label ?? v.arrangement}`,
+    `Adress: ${v.location || "–"}`,
+    ...(arrangement?.feeApplies
+      ? [`Reseavgift: ${zone ? zone.label : "–"}${fee ? ` (+${kr(fee)})` : " – bekräfta utifrån adressen"}`]
+      : []),
     `Önskad dag: ${v.date}, ${v.timeWindow}`,
-    `Preliminärt pris: ${kr(total)}${arrangement?.id === "other" ? " + ev. avgift enligt överenskommelse" : ""}`,
+    `Preliminärt pris: ${kr(total)}${feeKnown ? "" : arrangement?.feeApplies ? " + reseavgift (bekräftas)" : " + ev. avgift enligt överenskommelse"}`,
     `Bifogade bilder: ${photoCount}`,
     ``,
     `Meddelande:`,
