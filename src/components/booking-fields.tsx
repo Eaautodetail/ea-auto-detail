@@ -235,7 +235,6 @@ export function OptionCard({
         checked={checked}
         onChange={onChange}
         required={required}
-        aria-invalid={invalid || undefined}
         className="sr-only"
       />
       <span className="flex items-start justify-between gap-3">

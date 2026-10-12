@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import { bookingTimes, currentHours, getService, onSiteNeeds, site, type Service } from "@/config/site";
+import { bookingTimes, currentHours, getService, latestStartTime, onSiteNeeds, site, type Service } from "@/config/site";
 import {
   emptyBooking,
   fieldOrder,
@@ -27,6 +27,7 @@ import {
   FieldError,
   Legend,
   OptionCard,
+  RequiredText,
   SelectField,
   TextAreaField,
   TextField,
@@ -34,6 +35,7 @@ import {
 import {
   capitalize,
   paymentMethodsText,
+  PriceLine,
   PriceSummary,
   travelFeeText,
   type Price,
@@ -62,8 +64,21 @@ const FLEXIBLE_TIME = "Flexibel";
 
 /** Fält som ska valideras om när ett annat fält ändras. */
 const dependentFields: Partial<Record<BookingField, BookingField[]>> = {
+  service: ["time"],
   arrangement: ["location", "travelZone"],
 };
+
+/**
+ * Flyttar fokus till ett meddelande och visar dess överkant (under det fasta
+ * sidhuvudet tack vare `scroll-mt-*`). `focus()` utan `preventScroll` centrerar
+ * i stället höga element, så rubriken hamnar ovanför skärmen på mobil.
+ */
+function focusAndReveal(el: HTMLElement | null) {
+  if (!el) return;
+  el.focus({ preventScroll: true });
+  // "auto" följer CSS scroll-behavior, som är avstängd vid reducerad rörelse.
+  el.scrollIntoView({ block: "start", behavior: "auto" });
+}
 
 function timeLabel(time: string) {
   return time === FLEXIBLE_TIME ? "Flexibel – ni föreslår en tid" : `kl. ${time}`;
@@ -111,6 +126,8 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
   const [today, setToday] = useState("");
   const summaryRef = useRef<HTMLDivElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const introRef = useRef<HTMLParagraphElement>(null);
+  const focusIntroOnReset = useRef(false);
   const photoInput = useRef<HTMLInputElement>(null);
   const H = headingLevel;
 
@@ -132,6 +149,14 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
   }, [photos]);
   useEffect(() => () => photosRef.current.forEach((p) => URL.revokeObjectURL(p.url)), []);
 
+  // Efter "Skicka en ny förfrågan": visa formulärets början igen.
+  useEffect(() => {
+    if (status.state === "idle" && focusIntroOnReset.current) {
+      focusIntroOnReset.current = false;
+      focusAndReveal(introRef.current);
+    }
+  }, [status]);
+
   const price = priceSummary(values.service, values.arrangement, values.travelZone);
   const selectedService = price.service;
   const hours = currentHours();
@@ -141,13 +166,22 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
 
   function update(field: BookingField, value: string, opts: { touch?: boolean } = {}) {
     const next = { ...values, [field]: value };
+    // Byts tjänsten till en som inte hinns med på vald starttid nollställs tiden,
+    // med en förklaring under tidsfältet.
+    let timeNotice: string | undefined;
+    if (field === "service" && next.time && !bookingTimes(value).includes(next.time)) {
+      timeNotice = validateField("time", next, day());
+      next.time = "";
+    }
     setValues(next);
     if (opts.touch) setTouched((t) => ({ ...t, [field]: true }));
+    if (timeNotice) setTouched((t) => ({ ...t, time: true }));
     const isActive = (f: BookingField) => submitted || touched[f] || (opts.touch && f === field);
-    const recheck = [field, ...(dependentFields[field] ?? [])].filter(isActive);
-    if (recheck.length === 0) return;
+    const recheck = [field, ...(dependentFields[field] ?? [])].filter((f) => isActive(f) && !(timeNotice && f === "time"));
+    if (recheck.length === 0 && !timeNotice) return;
     setErrors((prev) => {
       const nextErrors = { ...prev };
+      if (timeNotice) nextErrors.time = timeNotice;
       for (const f of recheck) {
         const e = validateField(f, next, day());
         if (e) nextErrors[f] = e;
@@ -229,7 +263,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
     if (photoErr) nextErrors.photos = photoErr;
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
-      requestAnimationFrame(() => summaryRef.current?.focus());
+      requestAnimationFrame(() => focusAndReveal(summaryRef.current));
       return;
     }
 
@@ -260,7 +294,19 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
       setStatus({ state: "error", code: "network", message: "Ingen kontakt med servern. Kontrollera din uppkoppling." });
       track("booking_request_failed", { code: "network" });
     }
-    requestAnimationFrame(() => resultRef.current?.focus());
+    requestAnimationFrame(() => focusAndReveal(resultRef.current));
+  }
+
+  /** Ny förfrågan (t.ex. för en till bil): kontaktuppgifterna finns kvar, resten töms. */
+  function startNewRequest() {
+    photos.forEach((p) => URL.revokeObjectURL(p.url));
+    setPhotos([]);
+    setValues({ ...emptyBooking, name: values.name, phone: values.phone, email: values.email });
+    setErrors({});
+    setTouched({});
+    setSubmitted(false);
+    focusIntroOnReset.current = true;
+    setStatus({ state: "idle" });
   }
 
   if (status.state === "success") {
@@ -272,6 +318,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
         price={price}
         reference={status.reference}
         customerEmailSent={status.customerEmailSent}
+        onNewRequest={startNewRequest}
       />
     );
   }
@@ -279,14 +326,20 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
   const errorList = fieldOrder.filter((f) => errors[f]).map((f) => ({ field: f as string, message: errors[f]! }));
   if (errors.photos) errorList.push({ field: "photos", message: errors.photos });
 
-  const timeOptions = bookingTimes().map((t) => ({ value: t, label: timeLabel(t) }));
+  const timeOptions = bookingTimes(values.service).map((t) => ({ value: t, label: timeLabel(t) }));
+  const latestStart = selectedService ? latestStartTime(selectedService.id) : null;
   const whenHintId = `${formId}-when-hint`;
   const isPickup = values.arrangement === "pickup";
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
       <form noValidate onSubmit={onSubmit} aria-describedby={`${formId}-intro`} className="min-w-0 space-y-10">
-        <p id={`${formId}-intro`} className="text-sm text-mist-400">
+        <p
+          id={`${formId}-intro`}
+          ref={introRef}
+          tabIndex={-1}
+          className="scroll-mt-28 text-sm text-mist-400 outline-none"
+        >
           Fält markerade med <span aria-hidden="true">*</span>
           <span className="sr-only">asterisk</span> är obligatoriska. Det här är en förfrågan – vi bekräftar tid och
           pris innan bokningen gäller.
@@ -342,6 +395,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                 }
                 meta={formatSEK(s.price)}
                 invalid={!!showError("service")}
+                required
               />
             ))}
           </div>
@@ -391,6 +445,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                 description={a.description}
                 meta={a.feeApplies ? `Reseavgift från ${formatSEK(site.travelFeeFrom)}` : "Ingen reseavgift"}
                 invalid={!!showError("arrangement")}
+                required
               />
             ))}
           </div>
@@ -415,11 +470,13 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                   error={showError("location")}
                   autoComplete="street-address"
                   maxLength={120}
+                  required
                 />
               </div>
 
               <div
                 role="radiogroup"
+                aria-required="true"
                 aria-labelledby={`${fieldId("travelZone")}-label`}
                 aria-describedby={[
                   `${fieldId("travelZone")}-hint`,
@@ -430,9 +487,11 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                 className="mt-6"
               >
                 <p id={`${fieldId("travelZone")}-label`} className="text-sm font-semibold text-white">
-                  {isPickup
-                    ? `Hur långt från ${site.baseTown} hämtar vi bilen? *`
-                    : `Hur långt från ${site.baseTown} står bilen? *`}
+                  <RequiredText>
+                    {isPickup
+                      ? `Hur långt från ${site.baseTown} hämtar vi bilen? *`
+                      : `Hur långt från ${site.baseTown} står bilen? *`}
+                  </RequiredText>
                 </p>
                 <p id={`${fieldId("travelZone")}-hint`} className="mt-1 text-sm text-mist-400">
                   Reseavgiften tillkommer utöver priset för tjänsten. Vi åker upp till ca {site.travelMaxKm} km från{" "}
@@ -450,6 +509,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                       description={z.description}
                       meta={z.fee != null ? `+${formatSEK(z.fee)}` : "Bekräftas av oss"}
                       invalid={!!showError("travelZone")}
+                      required
                     />
                   ))}
                 </div>
@@ -470,6 +530,13 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                 <span className="whitespace-nowrap">{hours.text}</span> ({hours.label.toLowerCase()}).
               </span>
             </p>
+            {selectedService && latestStart && (
+              <p>
+                {capitalize(selectedService.name.toLowerCase())} tar{" "}
+                {selectedService.duration ? `ungefär ${selectedService.duration.replace(/^cirka /, "")}` : "en stund"}, så
+                senaste starttid är kl. {latestStart} för att vi ska hinna klart före {hours.close}.
+              </p>
+            )}
             <p>Datum och tid är ett önskemål – inte en bekräftad tid. Vi bekräftar tiden när vi har gått igenom förfrågan.</p>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
@@ -485,6 +552,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
               error={showError("date")}
               describedBy={whenHintId}
               className="min-h-[3.125rem] [&::-webkit-date-and-time-value]:text-left"
+              required
             />
             <SelectField
               id={fieldId("time")}
@@ -497,6 +565,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
               describedBy={whenHintId}
               options={timeOptions}
               placeholder="Välj tid"
+              required
             />
           </div>
         </fieldset>
@@ -516,6 +585,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
             autoComplete="off"
             spellCheck={false}
             maxLength={100}
+            required
           />
         </fieldset>
 
@@ -534,6 +604,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                 error={showError("name")}
                 autoComplete="name"
                 maxLength={100}
+                required
               />
             </div>
             <TextField
@@ -549,6 +620,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
               autoComplete="tel"
               inputMode="tel"
               maxLength={30}
+              required
             />
             <TextField
               id={fieldId("email")}
@@ -565,6 +637,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
               autoCapitalize="none"
               spellCheck={false}
               maxLength={120}
+              required
             />
           </div>
         </fieldset>
@@ -627,7 +700,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                     accept={PHOTO_LIMITS.acceptedTypes.join(",")}
                     multiple
                     className="sr-only"
-                    aria-labelledby={`${fieldId("photos")}-label`}
+                    aria-label={processingPhotos ? "Laddar bilder…" : "Lägg till bilder på bilen"}
                     aria-describedby={`${fieldId("photos")}-hint${errors.photos ? ` ${fieldId("photos")}-err` : ""}`}
                     onChange={(e) => addPhotos(e.target.files)}
                   />
@@ -657,6 +730,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
               type="checkbox"
               checked={values.consent === "on"}
               onChange={(e) => update("consent", e.target.checked ? "on" : "", { touch: true })}
+              required
               aria-invalid={!!showError("consent")}
               aria-describedby={showError("consent") ? `${fieldId("consent")}-err` : undefined}
               className="mt-0.5 size-5 shrink-0 accent-white"
@@ -666,7 +740,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
               <Link href="/integritet" className="font-semibold text-white underline underline-offset-2">
                 integritetspolicy
               </Link>
-              . *
+              . <span aria-hidden="true">*</span>
             </span>
           </label>
           <FieldError id={`${fieldId("consent")}-err`} message={showError("consent")} />
@@ -692,9 +766,12 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
           </div>
         )}
 
-        {/* På mobil ligger sammanfattningen direkt ovanför knappen så att priset syns innan man skickar. */}
+        {/* Priset syns alltid direkt ovanför knappen: hela sammanfattningen på mobil, en kort rad på dator. */}
         <div className="lg:hidden">
           <PriceSummary price={price} title="Sammanfattning innan du skickar" />
+        </div>
+        <div className="hidden lg:block">
+          <PriceLine price={price} />
         </div>
 
         <div className="flex flex-col gap-3">
@@ -733,7 +810,6 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
 function ArrangementInfo({ arrangement, service }: { arrangement: string; service?: Service }) {
   if (arrangement === "visit") {
     const needs = onSiteNeeds(service?.id);
-    const showMat = !service || service.onSite.water;
     return (
       <div className="mt-5 rounded-xl border border-white/15 bg-white/[0.04] p-4 sm:p-5">
         <p className="font-semibold text-white">Det här behöver vi hos dig</p>
@@ -759,7 +835,7 @@ function ArrangementInfo({ arrangement, service }: { arrangement: string; servic
             </li>
           ))}
         </ul>
-        {showMat && <p className="mt-3 text-sm text-mist-300">{site.onSite.mat}</p>}
+        <p className="mt-3 text-sm text-mist-300">{site.onSite.mat}</p>
         <p className="mt-3 border-t border-white/10 pt-3 text-sm text-mist-400">
           Saknar du något av detta? {site.onSite.pickupNote}
         </p>
@@ -786,6 +862,7 @@ function SuccessPanel({
   price,
   reference,
   customerEmailSent,
+  onNewRequest,
 }: {
   ref: React.Ref<HTMLDivElement>;
   H: "h2" | "h3";
@@ -793,6 +870,7 @@ function SuccessPanel({
   price: Price;
   reference: string;
   customerEmailSent: boolean;
+  onNewRequest: () => void;
 }) {
   const firstName = values.name.trim().split(/\s+/)[0];
   const when = [
@@ -824,10 +902,15 @@ function SuccessPanel({
         <strong className="text-white">Det här är ingen bekräftad tid än.</strong> Vi går igenom förfrågan och hör av
         oss för att bekräfta tid och pris. {site.responseTime}
       </p>
-      {customerEmailSent && (
+      {customerEmailSent ? (
         <p className="mt-3 max-w-xl leading-relaxed text-mist-200">
           Vi har skickat en kopia av din förfrågan till{" "}
           <span className="font-semibold text-white [overflow-wrap:anywhere]">{values.email}</span>.
+        </p>
+      ) : (
+        <p className="mt-3 max-w-xl leading-relaxed text-mist-200">
+          Du får ingen kopia av förfrågan via e-post den här gången. Spara referensen{" "}
+          <span className="font-semibold text-white">{reference}</span> – vi hör av oss på telefonnumret du angav.
         </p>
       )}
       <dl className="mt-8 grid gap-4 rounded-xl border border-white/10 bg-ink-900 p-5 text-sm sm:grid-cols-2">
@@ -866,9 +949,18 @@ function SuccessPanel({
         ) : null}
         .
       </p>
-      <Link href="/" className="mt-6 inline-block text-sm font-semibold text-white underline underline-offset-4">
-        Till startsidan
-      </Link>
+      <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <button
+          type="button"
+          onClick={onNewRequest}
+          className="inline-flex h-11 items-center rounded-full border border-white/30 px-5 text-sm font-semibold text-white transition-colors hover:border-white hover:bg-white/5"
+        >
+          Skicka en ny förfrågan
+        </button>
+        <Link href="/" className="text-sm font-semibold text-white underline underline-offset-4">
+          Till startsidan
+        </Link>
+      </div>
     </div>
   );
 }

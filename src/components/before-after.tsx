@@ -1,14 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 /** Standardformat innan bilden har laddats: stående 3:4, som en vanlig mobilbild. */
 const DEFAULT_RATIO = 3 / 4;
 
+/** Så här många pixlar måste fingret röra sig innan vi avgör om det är ett drag i sidled. */
+const DRAG_THRESHOLD = 6;
+
 /**
- * Före/efter-jämförelse med dragbar avdelare. Styrs med mus, touch eller
- * tangentbord (piltangenter) via ett vanligt range-reglage.
+ * Före/efter-jämförelse med dragbar avdelare. Mus och touch hanteras med
+ * pointer-händelser på bilden; tangentbord och skärmläsare använder ett vanligt
+ * range-reglage (piltangenter) som ligger osynligt ovanpå men inte tar emot klick.
+ *
+ * På touchskärmar flyttas avdelaren bara när fingret dras i sidled – en vanlig
+ * scroll uppåt eller nedåt över bilden lämnar jämförelsen orörd. Ett kort tryck
+ * flyttar avdelaren dit man trycker.
  *
  * Formatet (stående eller liggande) följer efterbilden automatiskt, så både
  * mobilbilder (3:4) och liggande bilder (4:3) fungerar utan inställningar.
@@ -28,11 +36,61 @@ export function BeforeAfter({
   const [pos, setPos] = useState(50);
   const [ratio, setRatio] = useState(DEFAULT_RATIO);
   const id = useId();
+  const box = useRef<HTMLDivElement>(null);
+  const gesture = useRef<{ id: number; x: number; y: number; dragging: boolean } | null>(null);
+
+  function moveTo(clientX: number) {
+    const rect = box.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return;
+    setPos(Math.round(Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100))));
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return;
+    const mouse = e.pointerType === "mouse";
+    gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, dragging: mouse };
+    if (mouse) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      moveTo(e.clientX);
+    }
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const g = gesture.current;
+    if (!g || g.id !== e.pointerId) return;
+    if (!g.dragging) {
+      const dx = Math.abs(e.clientX - g.x);
+      const dy = Math.abs(e.clientY - g.y);
+      if (dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) return;
+      // Mest lodrätt = scroll: släpp gesten och låt webbläsaren scrolla sidan.
+      if (dy >= dx) {
+        gesture.current = null;
+        return;
+      }
+      g.dragging = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    moveTo(e.clientX);
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    const g = gesture.current;
+    if (!g || g.id !== e.pointerId) return;
+    // Kort tryck utan rörelse flyttar avdelaren dit man tryckte.
+    if (!g.dragging) moveTo(e.clientX);
+    gesture.current = null;
+  }
 
   return (
     <div
-      className="group relative w-full select-none overflow-hidden rounded-xl bg-ink-800"
+      ref={box}
+      className="group relative w-full cursor-ew-resize touch-pan-y select-none overflow-hidden rounded-xl bg-ink-800"
       style={{ aspectRatio: ratio }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={() => (gesture.current = null)}
+      onDragStart={(e) => e.preventDefault()}
     >
       <Image
         src={after.src}
@@ -76,7 +134,7 @@ export function BeforeAfter({
         value={pos}
         onChange={(e) => setPos(Number(e.target.value))}
         aria-valuetext={`${pos}% före-bild synlig`}
-        className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
       />
     </div>
   );
