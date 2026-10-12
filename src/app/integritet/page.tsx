@@ -81,8 +81,14 @@ export default function PrivacyPage() {
             <h2>Varför använder vi uppgifterna?</h2>
             <p>Vi använder uppgifterna bara för att:</p>
             <ul>
-              <li>svara på din förfrågan och bekräfta tid och pris</li>
-              <li>skicka ett mejl om att vi har tagit emot förfrågan, och en bekräftelse när tiden är godkänd</li>
+              {mail.canEmailCustomers ? (
+                <>
+                  <li>svara på din förfrågan och bekräfta tid och pris</li>
+                  <li>skicka ett mejl om att vi har tagit emot förfrågan, och en bekräftelse när tiden är godkänd</li>
+                </>
+              ) : (
+                <li>svara på din förfrågan via telefon, sms eller e-post och bekräfta tid och pris</li>
+              )}
               <li>räkna fram reseavgiften och planera besöket eller hämtningen</li>
               <li>utföra jobbet och kontakta dig om det</li>
             </ul>
@@ -96,9 +102,15 @@ export default function PrivacyPage() {
             <h2>Hur hanteras förfrågan?</h2>
             <p>
               Webbplatsen sparar inte förfrågan i någon databas och personuppgifter loggas inte på servern.
-              Förfrågan skickas som e-post till oss, med eventuella bilder som bilagor.
+              {mail.canNotifyBusiness
+                ? " Förfrågan skickas som e-post till oss, med eventuella bilder som bilagor."
+                : webhookConfigured
+                  ? " Förfrågan, med eventuella bilder, förs över till det verktyg vi använder för att hålla ordning på bokningarna."
+                  : " Förfrågan skickas direkt vidare till oss."}
               {mail.canEmailCustomers && " Du får ett mejl till den e-postadress du angav om att vi har tagit emot förfrågan."}
-              {webhookConfigured && " Förfrågan förs också över till det verktyg vi använder för att hålla ordning på bokningarna."}
+              {mail.canNotifyBusiness &&
+                webhookConfigured &&
+                " Förfrågan förs också över till det verktyg vi använder för att hålla ordning på bokningarna."}
             </p>
           </section>
 

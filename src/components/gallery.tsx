@@ -76,7 +76,9 @@ export function Gallery({
       ) : (
         <ul className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {visibleItems.map((item, index) => {
+            // Tjänsten visas bara när den är bekräftad (serviceId i site.ts).
             const service = getService(item.serviceId);
+            const meta = [item.vehicle, service?.name].filter(Boolean).join(" · ");
             return (
               <li key={item.id} className={`reveal ${preview && index === 2 ? "hidden lg:block" : ""}`}>
                 <figure className="rounded-2xl border border-white/10 bg-ink-900 p-3">
@@ -84,9 +86,7 @@ export function Gallery({
                   <figcaption className="flex items-start justify-between gap-4 px-2 pb-1 pt-4">
                     <span>
                       <span className="block font-semibold text-white">{item.title}</span>
-                      <span className="text-sm text-mist-400">
-                        {[item.vehicle, service?.name].filter(Boolean).join(" · ")}
-                      </span>
+                      {meta && <span className="text-sm text-mist-400">{meta}</span>}
                       {item.note && <span className="mt-1 block text-sm text-mist-300">{item.note}</span>}
                     </span>
                     {item.placeholder ? (

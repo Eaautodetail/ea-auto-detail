@@ -25,10 +25,11 @@ export function ServiceCards({ headingLevel = "h3" }: { headingLevel?: "h2" | "h
 
 function ServiceCard({ service, headingLevel: H }: { service: Service; headingLevel: "h2" | "h3" }) {
   // Kombinationen jämförs med att boka de två delarna var för sig (räknas från priserna i site.ts).
+  // Visas bara när `site.comboSaving.show` är påslaget.
   const separate = site.services
     .filter((s) => s.id === "exterior" || s.id === "interior")
     .reduce((sum, s) => sum + s.price, 0);
-  const saving = service.id === "complete" ? separate - service.price : 0;
+  const saving = site.comboSaving.show && service.id === "complete" ? separate - service.price : 0;
 
   return (
     <article
@@ -40,7 +41,7 @@ function ServiceCard({ service, headingLevel: H }: { service: Service; headingLe
     >
       {service.highlighted && saving > 0 && (
         <p className="absolute -top-3 left-6 rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-black sm:left-7">
-          Mest prisvärt
+          {site.comboSaving.badge}
         </p>
       )}
       <H className="font-display text-xl font-bold text-white">{service.name}</H>
