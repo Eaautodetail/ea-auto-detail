@@ -6,8 +6,11 @@ Business facts live in `src/config/site.ts`. How to add photos, a logo or a hero
 ## Already supplied (in `site.ts`)
 - [x] E-mail for bookings and on the site: eaautodetail2026@gmail.com
 - [x] Phone for calls and SMS: 072-350 48 05
-- [x] Service area: Kristianstad, up to about 20 km (e.g. Åhus). Travel fee 150 kr within about 5 km, 250 kr for
-      5–20 km, and *Vet inte* is confirmed by you from the address.
+- [x] Service area: Kristianstad, up to about 15 km. Travel fee for *Mobil bilvård* 150 kr within about 5 km and
+      250 kr for 5–15 km; for *Hämtning och lämning* 250 kr / 350 kr (the 15 km limit is assumed to be the same – please
+      confirm). *Lämna bilen hos oss* is free. *Vet inte* is confirmed by you from the address.
+- [ ] *Lämna bilen hos oss*: the site has no address for where customers drop off the car. It says the address and
+      time are sent when you confirm – write them in the message field on `/hantera` when you confirm such a booking.
 - [x] Social links: TikTok, Instagram, Facebook
 - [x] Services: what each includes, approximate time, what is needed on site (el / vatten och el), extra-work note
 - [x] Working hours: every day, 09.00–19.00 (summer) and 09.00–18.00 (winter)

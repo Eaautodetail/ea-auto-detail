@@ -191,9 +191,14 @@ const firstName = (name: string) => {
 };
 const greeting = (word: string, name: string) => `${word}${firstName(name) ? ` ${firstName(name)}` : ""}!`;
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const timeText = (time: string) => (time === "Flexibel" ? "flexibel tid" : `kl. ${time}`);
 
-function onSiteBlocks(serviceId: string, arrangementId: string): Block[] {
+/**
+ * Vad som gäller för valt upplägg. `stage` = kvitto (förfrågan mottagen) eller
+ * bekräftelse – vid "Lämna bilen hos oss" skickas adressen först när tiden bekräftas.
+ */
+function onSiteBlocks(serviceId: string, arrangementId: string, stage: "receipt" | "confirmed"): Block[] {
   if (arrangementId === "visit") {
     return [
       { kind: "list", title: "Det här behöver vi på plats", items: onSiteNeeds(serviceId) },
@@ -201,6 +206,18 @@ function onSiteBlocks(serviceId: string, arrangementId: string): Block[] {
     ];
   }
   if (arrangementId === "pickup") return [{ kind: "paragraph", text: site.onSite.pickupNote }];
+  if (arrangementId === "dropoff") {
+    return [
+      {
+        kind: "paragraph",
+        text:
+          stage === "receipt"
+            ? `Du lämnar bilen hos oss – ${lowerFirst(site.onSite.dropoffHandover)}`
+            : "Du lämnar bilen hos oss. Står adressen inte i meddelandet ovan skickar vi den till dig – svara gärna på det här mejlet om du inte har fått den.",
+      },
+      { kind: "paragraph", text: site.onSite.dropoffNote, muted: true },
+    ];
+  }
   return [];
 }
 
@@ -293,18 +310,19 @@ export function customerReceiptEmail(v: BookingFields, reference: string): Rende
   const { service, arrangement, zone, base, fee, feeKnown, total } = priceSummary(v.service, v.arrangement, v.travelZone);
   const subject = `Vi har tagit emot din bokningsförfrågan (${reference})`;
 
-  const travelFee = !arrangement?.feeApplies
-    ? "Ingen"
-    : zone?.fee != null
-      ? `${formatSEK(fee)} (${zone.label.charAt(0).toLowerCase()}${zone.label.slice(1)})`
-      : "Bekräftas av oss utifrån adressen";
+  const travelFee =
+    arrangement && !arrangement.feeApplies
+      ? "Ingen (du lämnar bilen hos oss)"
+      : feeKnown && zone
+        ? `${formatSEK(fee)} (${lowerFirst(zone.label)})`
+        : "Bekräftas av oss utifrån adressen";
 
   const rows: [string, string][] = [
     ["Referens", reference],
     ["Tjänst", service ? `${service.name} – ${formatSEK(base)}` : v.service],
     ["Upplägg", arrangement?.label ?? v.arrangement],
   ];
-  if (v.location) rows.push(["Adress", cleanText(v.location)]);
+  if (v.location && arrangement?.feeApplies !== false) rows.push(["Adress", cleanText(v.location)]);
   rows.push(
     ["Reseavgift", travelFee],
     ["Önskad dag", `${capitalize(formatDate(v.date))}, ${timeText(v.time)}`],
@@ -324,7 +342,7 @@ export function customerReceiptEmail(v: BookingFields, reference: string): Rende
     { kind: "paragraph", text: site.responseTime },
     { kind: "rows", title: "Din förfrågan", rows },
     { kind: "paragraph", text: `${site.extraWorkNote} ${site.durationNote}`, muted: true },
-    ...onSiteBlocks(v.service, v.arrangement),
+    ...onSiteBlocks(v.service, v.arrangement, "receipt"),
     paymentBlock(),
     { kind: "contact", intro: "Har du frågor eller vill ändra något? Svara på det här mejlet eller kontakta oss:" },
   ];
@@ -365,7 +383,7 @@ export function customerConfirmationEmail(b: BookingTokenData, c: ConfirmedDetai
     ["Tjänst", service?.name ?? b.service],
     ["Upplägg", arrangement?.label ?? b.arrangement],
   ];
-  if (b.location) rows.push(["Adress", cleanText(b.location)]);
+  if (b.location && arrangement?.feeApplies !== false) rows.push(["Adress", cleanText(b.location)]);
   rows.push(["Bil", cleanText(b.vehicle)]);
   if (service?.duration) rows.push(["Ungefärlig tidsåtgång", `${service.duration} (uppskattning)`]);
   rows.push(["Pris", `${formatSEK(c.price)}${arrangement?.feeApplies ? " inkl. reseavgift" : ""}`]);
@@ -382,7 +400,7 @@ export function customerConfirmationEmail(b: BookingTokenData, c: ConfirmedDetai
     ...(message ? [{ kind: "notice", tone: "soft", title: "Meddelande från oss", text: message } satisfies Block] : []),
     { kind: "rows", title: "Din bokning", rows },
     { kind: "paragraph", text: site.extraWorkNote, muted: true },
-    ...onSiteBlocks(b.service, b.arrangement),
+    ...onSiteBlocks(b.service, b.arrangement, "confirmed"),
     paymentBlock(),
     { kind: "contact", intro: "Behöver du ändra något? Svara på det här mejlet eller kontakta oss:" },
   ];

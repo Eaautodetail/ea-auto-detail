@@ -3,7 +3,7 @@
  * direkt ovanför skicka-knappen på mobil, så att pris och reseavgift alltid
  * syns innan kunden skickar. Allt innehåll kommer från src/config/site.ts.
  */
-import { paymentMethodsText, site } from "@/config/site";
+import { paymentMethodsText, pricedZones, site, travelFeeFrom, type FeeArrangement } from "@/config/site";
 import type { priceSummary } from "@/lib/booking";
 import { formatSEK } from "@/lib/format";
 
@@ -25,8 +25,8 @@ export { paymentMethodsText };
 /** Reseavgiften som text för vald zon, eller vad som återstår att välja. */
 export function travelFeeText(price: Price) {
   const { arrangement, zone } = price;
-  if (!arrangement) return `Från ${formatSEK(site.travelFeeFrom)}`;
-  if (!arrangement.feeApplies) return "Ingen";
+  if (!arrangement) return "Beror på upplägget";
+  if (!arrangement.feeApplies) return "Gratis";
   if (price.feeKnown) return `+${formatSEK(price.fee)}`;
   return zone ? "Bekräftas" : "Välj avstånd";
 }
@@ -35,7 +35,7 @@ export function PriceSummary({ price, title = "Din förfrågan" }: { price: Pric
   const { service, arrangement, zone } = price;
   const feeDetail = arrangement
     ? [arrangement.label, zone?.label].filter(Boolean).join(" · ")
-    : `Beror på avståndet från ${site.baseTown}`;
+    : "Välj var vi ska ta hand om bilen";
 
   return (
     <div className="rounded-2xl border border-white/15 bg-ink-850 p-5 sm:p-6">
@@ -76,17 +76,36 @@ export function PriceSummary({ price, title = "Din förfrågan" }: { price: Pric
 
       <ul className="mt-4 space-y-2 border-t border-white/10 pt-4 text-xs leading-relaxed text-mist-400">
         <li>
-          <span className="font-semibold text-mist-200">Reseavgift</span> tillkommer utöver priset för tjänsten:
-          <ul className="mt-1 space-y-0.5">
-            {site.travelZones
-              .filter((z) => z.fee != null)
-              .map((z) => (
+          <span className="font-semibold text-mist-200">Reseavgift</span> tillkommer utöver priset för tjänsten
+          {arrangement?.feeApplies ? ` (${arrangement.label.toLowerCase()})` : ""}:
+          {arrangement && !arrangement.feeApplies ? (
+            <span className="mt-1 flex justify-between gap-3">
+              <span className="min-w-0">{arrangement.label}</span>
+              <span className="shrink-0 font-semibold text-mist-200">Gratis</span>
+            </span>
+          ) : arrangement ? (
+            <ul className="mt-1 space-y-0.5">
+              {pricedZones.map((z) => (
                 <li key={z.id} className="flex justify-between gap-3">
                   <span className="min-w-0">{z.label}</span>
-                  <span className="shrink-0 font-semibold text-mist-200">{formatSEK(z.fee!)}</span>
+                  <span className="shrink-0 font-semibold text-mist-200">
+                    {formatSEK(z.fees[arrangement.id as FeeArrangement])}
+                  </span>
                 </li>
               ))}
-          </ul>
+            </ul>
+          ) : (
+            <ul className="mt-1 space-y-0.5">
+              {site.arrangements.map((a) => (
+                <li key={a.id} className="flex justify-between gap-3">
+                  <span className="min-w-0">{a.label}</span>
+                  <span className="shrink-0 font-semibold text-mist-200">
+                    {a.feeApplies ? `från ${formatSEK(travelFeeFrom(a.id))}` : "Gratis"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </li>
         <li>{firstSentence(site.durationNote)}</li>
         <li>{site.extraWorkNote}</li>

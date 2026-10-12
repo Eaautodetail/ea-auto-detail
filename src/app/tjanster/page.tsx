@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getService, site } from "@/config/site";
+import { getService, site, travelFeeFrom } from "@/config/site";
 import { formatSEK } from "@/lib/format";
 import { PageHero, CtaBand, HowItWorks } from "@/components/blocks";
 import { ServiceCards, ServiceNotes } from "@/components/services";
@@ -14,7 +14,7 @@ const price = (id: string) => formatSEK(getService(id)?.price ?? 0);
 
 export const metadata: Metadata = {
   title: `Tjänster & priser – biltvätt och invändig rengöring i ${site.baseTown}`,
-  description: `Utvändig biltvätt ${price("exterior")}, invändig rengöring ${price("interior")} eller båda för ${price("complete")}. Mobil bilvård eller hämtning och lämning i ${site.baseTown} – reseavgift från ${formatSEK(site.travelFeeFrom)}.`,
+  description: `Utvändig biltvätt ${price("exterior")}, invändig rengöring ${price("interior")} eller båda för ${price("complete")}. Mobil bilvård (reseavgift från ${formatSEK(travelFeeFrom("visit"))}), hämtning och lämning (från ${formatSEK(travelFeeFrom("pickup"))}) eller lämna bilen hos oss utan reseavgift i ${site.baseTown}.`,
   alternates: { canonical: "/tjanster" },
 };
 
@@ -24,7 +24,7 @@ export default function ServicesPage() {
       <PageHero
         eyebrow="Tjänster & priser"
         title="Ren bil, tydligt pris."
-        intro={`Utvändig biltvätt, invändig rengöring eller båda delarna tillsammans – hos dig i ${site.baseTown} med omnejd eller hos oss med hämtning och lämning. Alla priser anges i svenska kronor.`}
+        intro={`Utvändig biltvätt, invändig rengöring eller båda delarna tillsammans – hos dig i ${site.baseTown} med omnejd eller hos oss, med hämtning och lämning eller när du lämnar bilen själv. Alla priser anges i svenska kronor.`}
       />
 
       <Section labelledBy="priser-rubrik">
@@ -39,7 +39,7 @@ export default function ServicesPage() {
           id="reseavgift-rubrik"
           eyebrow="Reseavgift och totalpris"
           title="Vad kostar det totalt?"
-          intro={`Reseavgiften tillkommer utöver priset för tjänsten och beror på avståndet från ${site.baseTown}. Du ser den i bokningsformuläret innan du skickar din förfrågan.`}
+          intro={`Reseavgiften tillkommer utöver priset för tjänsten och beror på upplägget och avståndet från ${site.baseTown}. Lämnar du bilen hos oss tillkommer ingen reseavgift. Du ser avgiften i bokningsformuläret innan du skickar din förfrågan.`}
         />
         <div className="mt-12 grid gap-5 lg:grid-cols-[1fr_1.15fr] lg:items-start">
           <TravelFeeZones className="reveal" />
@@ -57,8 +57,8 @@ export default function ServicesPage() {
         <SectionHeading
           id="upplagg-rubrik"
           eyebrow="Hos dig eller hos oss"
-          title="Mobil bilvård eller hämtning?"
-          intro="Vid mobil bilvård tvättar vi bilen hos dig. Vid hämtning och lämning tar vi bilen till oss och gör jobbet där."
+          title="Hos dig eller hos oss?"
+          intro="Vid mobil bilvård tvättar vi bilen hos dig. Vid hämtning och lämning tar vi bilen till oss och gör jobbet där. Du kan också lämna bilen hos oss själv."
         />
         <div className="mt-12">
           <ArrangementComparison />

@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
-import { site } from "@/config/site";
+import { site, travelFeeFrom } from "@/config/site";
 import { formatSEK } from "@/lib/format";
 import { BookingButton } from "@/components/booking-button";
 import { ResponseTimeNote } from "@/components/contact-details";
 import { paymentMethodsText } from "@/components/payment-info";
-import { feeZones } from "@/components/travel-fees";
 import { Container, Eyebrow, Placeholder } from "@/components/ui";
 
 /** Sidhuvud för undersidor (under den fasta menyn). */
@@ -51,11 +50,11 @@ const reasons = [
   },
   {
     title: "Tydliga priser",
-    text: `Från ${formatSEK(lowestPrice)} plus reseavgift (${feeZones.map((z) => formatSEK(z.fee)).join(" eller ")}). Du ser priset och reseavgiften innan du skickar förfrågan.`,
+    text: `Från ${formatSEK(lowestPrice)}. Reseavgift från ${formatSEK(travelFeeFrom("visit"))} vid mobil bilvård och från ${formatSEK(travelFeeFrom("pickup"))} vid hämtning och lämning – lämnar du bilen hos oss är den gratis. Du ser priset och reseavgiften innan du skickar förfrågan.`,
   },
   {
     title: "Hos dig eller hos oss",
-    text: "Vi tvättar bilen där den står, eller hämtar den, gör jobbet hos oss och lämnar tillbaka den.",
+    text: "Vi tvättar bilen där den står, hämtar den och lämnar tillbaka den när den är klar – eller så lämnar du bilen hos oss.",
   },
   {
     title: "Inget extra utan ditt ja",
@@ -89,7 +88,7 @@ export function WhyUs() {
 const steps = [
   {
     title: "Skicka en förfrågan",
-    text: "Välj tjänst, dag och tid och om vi ska komma till dig eller hämta bilen. Du ser pris och reseavgift innan du skickar.",
+    text: "Välj tjänst, dag och tid och var vi ska ta hand om bilen – hos dig eller hos oss. Du ser pris och reseavgift innan du skickar.",
   },
   {
     title: "Vi återkommer",

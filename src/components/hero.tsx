@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { currentHours, site } from "@/config/site";
+import { currentHours, pricedZones, site } from "@/config/site";
 import { formatSEK } from "@/lib/format";
 import { HeroArt } from "@/components/hero-art";
 import { BookingButton } from "@/components/booking-button";
@@ -14,9 +14,12 @@ export function Hero() {
   const lowest = Math.min(...site.services.map((s) => s.price));
   const hours = currentHours();
 
+  // 0 kr när du lämnar bilen hos oss, upp till högsta avgiften i site.ts.
+  const maxFee = Math.max(...pricedZones.flatMap((z) => Object.values(z.fees)));
+
   const facts = [
     { label: "Från", value: formatSEK(lowest) },
-    { label: "Reseavgift från", value: formatSEK(site.travelFeeFrom) },
+    { label: "Reseavgift", value: `0–${formatSEK(maxFee)}` },
     { label: site.hours.days, value: hours.text },
   ];
 
@@ -50,8 +53,8 @@ export function Hero() {
             <span className="text-mist-300">Utan krångel.</span>
           </h1>
           <p className="hero-in hero-in-delay-2 mt-6 max-w-xl text-lg leading-relaxed text-mist-200">
-            Utvändig biltvätt, invändig rengöring eller både och. Vi kommer till dig i {site.baseTown} med omnejd – eller
-            hämtar bilen, gör jobbet hos oss och lämnar tillbaka den.
+            Utvändig biltvätt, invändig rengöring eller både och. Vi kommer till dig i {site.baseTown} med omnejd, hämtar
+            bilen och lämnar tillbaka den – eller så lämnar du bilen hos oss.
           </p>
           <div className="hero-in hero-in-delay-3 mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <BookingButton location="hero" />

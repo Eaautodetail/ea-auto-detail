@@ -4,10 +4,21 @@
  * korrekta tjänster, priser och villkor direkt från samma källa som sajten
  * (src/config/site.ts). Inga personuppgifter.
  */
-import { currentHours, onSiteNeeds, seasonHoursText, site, socialLinks, type SeasonId } from "@/config/site";
+import {
+  currentHours,
+  onSiteNeeds,
+  pricedZones,
+  seasonHoursText,
+  site,
+  socialLinks,
+  type FeeArrangement,
+  type SeasonId,
+} from "@/config/site";
 import { formatSEK } from "@/lib/format";
 import { paymentMethodsText } from "@/components/payment-info";
 import { feeArrangementsText } from "@/components/travel-fees";
+
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
 
 export function GET() {
   const { phone, email, serviceArea } = site.contact;
@@ -27,19 +38,23 @@ export function GET() {
     `- ${site.extraWorkNote}`,
     "- Vi erbjuder inte maskinpolering, lackkorrigering eller andra avancerade behandlingar. Endast tjänsterna ovan kan bokas.",
     "",
-    "## Mobil bilvård eller hämtning och lämning",
+    "## Mobil bilvård, hämtning och lämning eller lämna bilen hos oss",
     ...site.arrangements.map((a) => `- ${a.label}: ${a.description}`),
     ...site.services.map((s) => `- Krav vid mobil bilvård, ${s.name.toLowerCase()}: ${onSiteNeeds(s.id).join("; ")}`),
     `- ${site.onSite.mat}`,
     `- ${site.onSite.pickupNote}`,
+    `- ${site.onSite.dropoffNote} ${site.onSite.dropoffHandover}`,
     "",
     "## Reseavgift",
     `Tillkommer utöver priset för tjänsten, ${feeArrangementsText()}. Avståndet räknas från ${site.baseTown}.`,
-    ...site.travelZones.map((z) =>
-      z.fee != null
-        ? `- ${z.label}: ${formatSEK(z.fee)}. ${z.description}`
-        : `- Osäker på avståndet: ${z.description} Kunden anger sin adress i bokningen.`,
+    ...site.arrangements.map((a) =>
+      a.feeApplies
+        ? `- ${a.label}: ${pricedZones.map((z) => `${lowerFirst(z.label)} ${formatSEK(z.fees[a.id as FeeArrangement])}`).join(", ")}.`
+        : `- ${a.label}: ingen reseavgift (gratis).`,
     ),
+    ...site.travelZones
+      .filter((z) => z.fees == null)
+      .map((z) => `- Osäker på avståndet: ${z.description} Kunden anger sin adress i bokningen.`),
     `- Vi åker upp till ca ${site.travelMaxKm} km från ${site.baseTown}.`,
     "",
     "## Arbetstider",

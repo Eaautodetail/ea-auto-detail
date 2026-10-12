@@ -1,12 +1,11 @@
 /**
- * "Mobil bilvård eller hämtning?" – vad som gäller för respektive upplägg.
+ * "Hos dig eller hos oss?" – vad som gäller för respektive upplägg.
  * Allt läses från `site.arrangements`, `site.services[].onSite` och
  * `site.onSite` i src/config/site.ts.
  */
-import { getArrangement, site, type Service } from "@/config/site";
+import { getArrangement, pricedZones, site, type FeeArrangement, type Service } from "@/config/site";
 import { formatSEK } from "@/lib/format";
 import { CheckIcon, Icon, IconBadge, type IconName } from "@/components/ui";
-import { feeZones, shortZoneLabel } from "@/components/travel-fees";
 
 /** Vad en tjänst kräver på plats vid mobil bilvård, t.ex. "Vatten och el". */
 export function utilitiesLabel(service: Service) {
@@ -31,18 +30,24 @@ export function UtilityIcons({ service, className = "size-4" }: { service: Servi
   );
 }
 
-function FeeFootnote() {
+/** Reseavgiften för ett upplägg, t.ex. "inom ca 5 km 150 kr · 5–15 km 250 kr". */
+function FeeFootnote({ arrangement }: { arrangement: FeeArrangement | null }) {
   return (
     <p className="mt-6 border-t border-white/10 pt-4 text-sm text-mist-300">
       Reseavgift:{" "}
-      {feeZones.map((z, i) => (
-        <span key={z.id}>
-          {i > 0 && " · "}
-          <span className="whitespace-nowrap">
-            {shortZoneLabel(z).toLowerCase()} <strong className="font-semibold text-white">{formatSEK(z.fee)}</strong>
+      {arrangement ? (
+        pricedZones.map((z, i) => (
+          <span key={z.id}>
+            {i > 0 && " · "}
+            <span className="whitespace-nowrap">
+              {z.shortLabel.toLowerCase()}{" "}
+              <strong className="font-semibold text-white">{formatSEK(z.fees[arrangement])}</strong>
+            </span>
           </span>
-        </span>
-      ))}
+        ))
+      ) : (
+        <strong className="font-semibold text-white">gratis</strong>
+      )}
     </p>
   );
 }
@@ -50,9 +55,10 @@ function FeeFootnote() {
 export function ArrangementComparison({ headingLevel: H = "h3" }: { headingLevel?: "h2" | "h3" }) {
   const visit = getArrangement("visit");
   const pickup = getArrangement("pickup");
+  const dropoff = getArrangement("dropoff");
 
   return (
-    <div className="grid gap-5 md:grid-cols-2">
+    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
       {visit && (
         <article className="reveal flex flex-col rounded-2xl border border-white/15 bg-ink-850 p-6 sm:p-8">
           <div className="flex items-center gap-3">
@@ -90,7 +96,7 @@ export function ArrangementComparison({ headingLevel: H = "h3" }: { headingLevel
             </li>
           </ul>
           <div className="mt-auto">
-            <FeeFootnote />
+            <FeeFootnote arrangement="visit" />
           </div>
         </article>
       )}
@@ -119,7 +125,40 @@ export function ArrangementComparison({ headingLevel: H = "h3" }: { headingLevel
             <span>{site.onSite.pickupNote}</span>
           </div>
           <div className="mt-auto">
-            <FeeFootnote />
+            <FeeFootnote arrangement="pickup" />
+          </div>
+        </article>
+      )}
+
+      {dropoff && (
+        <article className="reveal flex flex-col rounded-2xl border border-white/15 bg-ink-850 p-6 sm:p-8 md:col-span-2 lg:col-span-1">
+          <div className="flex items-center gap-3">
+            <IconBadge name="parking" />
+            <div>
+              <H className="font-display text-xl font-bold text-white">{dropoff.label}</H>
+              <p className="text-sm text-mist-400">Du lämnar, vi tvättar</p>
+            </div>
+          </div>
+          <p className="mt-4 leading-relaxed text-mist-200">{dropoff.description}</p>
+
+          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-mist-400">
+            Det här slipper du
+          </p>
+          <div className="mt-3 flex items-start gap-3 rounded-xl border border-white/10 bg-ink-900 p-4 text-sm leading-relaxed text-mist-200">
+            <span
+              aria-hidden="true"
+              className="grid size-6 shrink-0 place-items-center rounded-full bg-white text-black"
+            >
+              <CheckIcon className="size-3.5" />
+            </span>
+            <span>{site.onSite.dropoffNote}</span>
+          </div>
+          <p className="mt-4 flex items-start gap-3 text-sm leading-relaxed text-mist-200">
+            <Icon name="info" className="mt-0.5 size-5 shrink-0 text-white" />
+            <span>{site.onSite.dropoffHandover}</span>
+          </p>
+          <div className="mt-auto">
+            <FeeFootnote arrangement={null} />
           </div>
         </article>
       )}

@@ -1,4 +1,4 @@
-import { site, type Service } from "@/config/site";
+import { site, travelFeeFrom, type Service } from "@/config/site";
 import { formatSEK } from "@/lib/format";
 import { BookingButton } from "@/components/booking-button";
 import { CheckIcon, Icon, InfoCard } from "@/components/ui";
@@ -56,7 +56,9 @@ function ServiceCard({ service, headingLevel: H }: { service: Service; headingLe
       {saving > 0 && (
         <p className="mt-1 text-sm text-mist-300">{formatSEK(saving)} billigare än att boka delarna var för sig</p>
       )}
-      <p className="mt-1 text-sm text-mist-400">+ reseavgift från {formatSEK(site.travelFeeFrom)}</p>
+      <p className="mt-1 text-sm text-mist-400">
+        + reseavgift från {formatSEK(travelFeeFrom("visit"))} · gratis om du lämnar bilen hos oss
+      </p>
 
       {service.duration && (
         <p className="mt-5 flex items-center gap-2 text-sm text-mist-200">

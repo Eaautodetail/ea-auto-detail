@@ -46,7 +46,7 @@ export default function ContactPage() {
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-mist-400">Rekommenderas</p>
               <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">Boka via formuläret</h2>
               <p className="mt-4 leading-relaxed text-mist-300">
-                Välj tjänst, dag och tid och om vi ska komma till dig eller hämta bilen. Du ser priset och
+                Välj tjänst, dag och tid och var vi ska ta hand om bilen – hos dig eller hos oss. Du ser priset och
                 reseavgiften innan du skickar. En förfrågan är inte en bokning – vi bekräftar tid och pris med dig.
               </p>
               <BookingButton location="contact_page" className="mt-8 max-sm:w-full" />

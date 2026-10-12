@@ -25,7 +25,7 @@ export function Footer() {
         <div className="flex flex-col items-start gap-5">
           <Logo />
           <p className="max-w-sm text-sm leading-relaxed text-mist-400">
-            {site.tagline}. Mobil bilvård samt hämtning och lämning i {serviceArea ?? site.baseTown}.
+            {site.tagline}. Mobil bilvård, hämtning och lämning – eller lämna bilen hos oss – i {serviceArea ?? site.baseTown}.
           </p>
           <BookingButton location="footer" size="md" />
           <ResponseTimeNote className="max-w-xs" />

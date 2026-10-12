@@ -456,7 +456,11 @@ function ConfirmForm({ token, booking }: { token: string; booking: ManagedBookin
         <Field
           id={id("message")}
           label="Meddelande till kunden (valfritt)"
-          hint="Visas i mejlet, t.ex. hur ni gör med nyckeln vid hämtning."
+          hint={
+            arrangement && !arrangement.feeApplies
+              ? "Visas i mejlet. Kunden lämnar bilen hos er – skriv adressen och var bilen ska lämnas, annars får kunden den inte."
+              : "Visas i mejlet, t.ex. hur ni gör med nyckeln vid hämtning."
+          }
           error={errors.message}
         >
           <textarea

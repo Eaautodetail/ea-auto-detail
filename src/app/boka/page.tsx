@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { site } from "@/config/site";
+import { site, travelFeeFrom } from "@/config/site";
 import { formatSEK } from "@/lib/format";
 import { PageHero } from "@/components/blocks";
 import { BookingForm } from "@/components/booking-form";
@@ -9,7 +9,7 @@ import { Section } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Boka bilvård – skicka en bokningsförfrågan",
-  description: `Boka utvändig biltvätt, invändig rengöring eller båda i ${site.baseTown} med omnejd. Vi kommer till dig eller hämtar och lämnar bilen – reseavgift från ${formatSEK(site.travelFeeFrom)}.`,
+  description: `Boka utvändig biltvätt, invändig rengöring eller båda i ${site.baseTown} med omnejd. Vi kommer till dig (reseavgift från ${formatSEK(travelFeeFrom("visit"))}), hämtar och lämnar bilen (från ${formatSEK(travelFeeFrom("pickup"))}) eller så lämnar du bilen hos oss utan reseavgift.`,
   alternates: { canonical: "/boka" },
 };
 

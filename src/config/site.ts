@@ -130,7 +130,7 @@ export const site = {
 
   tagline: "Noggrann bilvård – hos dig eller hos oss",
   description:
-    "EA Auto Detail är ett litet bilvårdsföretag i Kristianstad som drivs av två unga entreprenörer. Utvändig biltvätt, invändig rengöring och mobil bilvård – vi kommer till dig eller hämtar bilen.",
+    "EA Auto Detail är ett litet bilvårdsföretag i Kristianstad som drivs av två unga entreprenörer. Utvändig biltvätt, invändig rengöring och mobil bilvård – vi kommer till dig, hämtar bilen eller så lämnar du den hos oss.",
 
   /** Logotyp. `null` = textbaserad ordmärkning används. */
   logo: null as null | { src: string; width: number; height: number },

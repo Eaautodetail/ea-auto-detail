@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { site } from "@/config/site";
+import { site, travelFeeFrom } from "@/config/site";
 import { Hero } from "@/components/hero";
 import { PricingTerms, ServiceCards } from "@/components/services";
 import { ArrangementComparison } from "@/components/on-site-info";
@@ -37,7 +37,7 @@ export default function HomePage() {
           id="tjanster-rubrik"
           eyebrow="Tjänster & priser"
           title="Tre tjänster. Tydliga priser."
-          intro={`Priset gäller själva tjänsten. Reseavgiften (från ${formatSEK(site.travelFeeFrom)}) tillkommer och syns innan du skickar din förfrågan.`}
+          intro={`Priset gäller själva tjänsten. Vid mobil bilvård tillkommer reseavgift från ${formatSEK(travelFeeFrom("visit"))} och vid hämtning och lämning från ${formatSEK(travelFeeFrom("pickup"))}. Lämnar du bilen hos oss är det gratis. Du ser avgiften innan du skickar din förfrågan.`}
         />
         <div className="mt-12">
           <ServiceCards />
@@ -54,8 +54,8 @@ export default function HomePage() {
         <SectionHeading
           id="upplagg-rubrik"
           eyebrow="Hos dig eller hos oss"
-          title="Mobil bilvård eller hämtning?"
-          intro={`Vi utgår från ${site.baseTown}. Välj om vi ska tvätta bilen där den står eller hämta den och göra jobbet hos oss.`}
+          title="Hos dig eller hos oss?"
+          intro={`Vi utgår från ${site.baseTown}. Välj om vi ska tvätta bilen där den står, hämta den och göra jobbet hos oss – eller om du lämnar bilen hos oss.`}
         />
         <div className="mt-12">
           <ArrangementComparison />

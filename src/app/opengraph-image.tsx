@@ -49,7 +49,7 @@ export default function OpengraphImage() {
             {`Biltvätt & invändig rengöring från ${formatSEK(lowest)}`}
           </div>
           <div style={{ marginTop: 8, fontSize: 30, color: "#b0b2b8" }}>
-            {`Mobil bilvård eller hämtning · ${site.baseTown} med omnejd`}
+            {`Hos dig eller hos oss · ${site.baseTown} med omnejd`}
           </div>
         </div>
       </div>

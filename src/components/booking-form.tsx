@@ -2,8 +2,19 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import { bookingTimes, currentHours, getService, latestStartTime, onSiteNeeds, site, type Service } from "@/config/site";
 import {
+  bookingTimes,
+  currentHours,
+  getService,
+  latestStartTime,
+  onSiteNeeds,
+  site,
+  travelFee,
+  travelFeeFromText,
+  type Service,
+} from "@/config/site";
+import {
+  dropUnusedLocation,
   emptyBooking,
   fieldOrder,
   locationRequired,
@@ -178,10 +189,16 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
     if (timeNotice) setTouched((t) => ({ ...t, time: true }));
     const isActive = (f: BookingField) => submitted || touched[f] || (opts.touch && f === field);
     const recheck = [field, ...(dependentFields[field] ?? [])].filter((f) => isActive(f) && !(timeNotice && f === "time"));
-    if (recheck.length === 0 && !timeNotice) return;
+    // Lämnar kunden bilen hos oss döljs adress och avstånd – ta bort deras fel.
+    const hidesLocation = field === "arrangement" && !locationRequired(value);
+    if (recheck.length === 0 && !timeNotice && !hidesLocation) return;
     setErrors((prev) => {
       const nextErrors = { ...prev };
       if (timeNotice) nextErrors.time = timeNotice;
+      if (hidesLocation) {
+        delete nextErrors.location;
+        delete nextErrors.travelZone;
+      }
       for (const f of recheck) {
         const e = validateField(f, next, day());
         if (e) nextErrors[f] = e;
@@ -258,7 +275,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
     if (status.state === "submitting") return;
     setSubmitted(true);
 
-    const nextErrors = validateBooking(values, day());
+    const nextErrors = validateBooking(dropUnusedLocation(values), day());
     const photoErr = validatePhotos(photos.map((p) => ({ size: p.file.size, type: p.file.type })));
     if (photoErr) nextErrors.photos = photoErr;
     setErrors(nextErrors);
@@ -272,7 +289,8 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
     // från state så att de alltid stämmer med det kunden ser.
     const body = new FormData(e.currentTarget);
     body.delete("photos");
-    for (const key of Object.keys(emptyBooking) as BookingField[]) body.set(key, values[key]);
+    const sent = dropUnusedLocation(values);
+    for (const key of Object.keys(emptyBooking) as BookingField[]) body.set(key, sent[key]);
     photos.forEach((p) => body.append("photos", p.file, p.file.name));
 
     try {
@@ -433,7 +451,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
         {/* 2. Upplägg, adress och reseavgift */}
         <fieldset aria-describedby={showError("arrangement") ? `${fieldId("arrangement")}-err` : undefined}>
           <Legend step={2}>Var ska vi ta hand om bilen? *</Legend>
-          <div className="grid scroll-mt-32 gap-3 sm:grid-cols-2" id={fieldId("arrangement")} tabIndex={-1}>
+          <div className="grid scroll-mt-32 gap-3 sm:grid-cols-3" id={fieldId("arrangement")} tabIndex={-1}>
             {site.arrangements.map((a) => (
               <OptionCard
                 key={a.id}
@@ -443,7 +461,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                 onChange={() => update("arrangement", a.id)}
                 title={a.label}
                 description={a.description}
-                meta={a.feeApplies ? `Reseavgift från ${formatSEK(site.travelFeeFrom)}` : "Ingen reseavgift"}
+                meta={travelFeeFromText(a.id)}
                 invalid={!!showError("arrangement")}
                 required
               />
@@ -494,24 +512,28 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                   </RequiredText>
                 </p>
                 <p id={`${fieldId("travelZone")}-hint`} className="mt-1 text-sm text-mist-400">
-                  Reseavgiften tillkommer utöver priset för tjänsten. Vi åker upp till ca {site.travelMaxKm} km från{" "}
-                  {site.baseTown}. Vi kontrollerar avgiften mot adressen innan vi bekräftar.
+                  Reseavgiften för {price.arrangement?.label.toLowerCase()} tillkommer utöver priset för tjänsten. Vi åker
+                  upp till ca {site.travelMaxKm} km från {site.baseTown}. Vi kontrollerar avgiften mot adressen innan vi
+                  bekräftar.
                 </p>
                 <div className="mt-3 grid scroll-mt-32 gap-3 sm:grid-cols-3" id={fieldId("travelZone")} tabIndex={-1}>
-                  {site.travelZones.map((z) => (
-                    <OptionCard
-                      key={z.id}
-                      name="travelZone"
-                      value={z.id}
-                      checked={values.travelZone === z.id}
-                      onChange={() => update("travelZone", z.id)}
-                      title={z.label}
-                      description={z.description}
-                      meta={z.fee != null ? `+${formatSEK(z.fee)}` : "Bekräftas av oss"}
-                      invalid={!!showError("travelZone")}
-                      required
-                    />
-                  ))}
+                  {site.travelZones.map((z) => {
+                    const zoneFee = travelFee(values.arrangement, z.id);
+                    return (
+                      <OptionCard
+                        key={z.id}
+                        name="travelZone"
+                        value={z.id}
+                        checked={values.travelZone === z.id}
+                        onChange={() => update("travelZone", z.id)}
+                        title={z.label}
+                        description={z.description}
+                        meta={zoneFee != null ? `+${formatSEK(zoneFee)}` : "Bekräftas av oss"}
+                        invalid={!!showError("travelZone")}
+                        required
+                      />
+                    );
+                  })}
                 </div>
                 <FieldError id={`${fieldId("travelZone")}-err`} message={showError("travelZone")} />
               </div>
@@ -806,7 +828,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
   );
 }
 
-/** Vad kunden behöver ordna (mobil bilvård) eller inte behöver ordna (hämtning och lämning). */
+/** Vad kunden behöver ordna (mobil bilvård) eller inte behöver ordna (hämtning och lämning, lämna bilen hos oss). */
 function ArrangementInfo({ arrangement, service }: { arrangement: string; service?: Service }) {
   if (arrangement === "visit") {
     const needs = onSiteNeeds(service?.id);
@@ -837,7 +859,7 @@ function ArrangementInfo({ arrangement, service }: { arrangement: string; servic
         </ul>
         <p className="mt-3 text-sm text-mist-300">{site.onSite.mat}</p>
         <p className="mt-3 border-t border-white/10 pt-3 text-sm text-mist-400">
-          Saknar du något av detta? {site.onSite.pickupNote}
+          Saknar du något av detta? {site.onSite.atOurPlaceNote}
         </p>
       </div>
     );
@@ -848,6 +870,28 @@ function ArrangementInfo({ arrangement, service }: { arrangement: string; servic
       <div className="mt-5 rounded-xl border border-white/15 bg-white/[0.04] p-4 sm:p-5">
         <p className="font-semibold text-white">Bra att veta</p>
         <p className="mt-1 text-sm text-mist-200">{site.onSite.pickupNote}</p>
+      </div>
+    );
+  }
+
+  if (arrangement === "dropoff") {
+    return (
+      <div className="mt-5 rounded-xl border border-white/15 bg-white/[0.04] p-4 sm:p-5">
+        <p className="font-semibold text-white">Bra att veta</p>
+        <ul className="mt-2 space-y-2 text-sm text-mist-200">
+          <li className="flex items-start gap-2">
+            <CheckIcon className="mt-0.5 size-4 shrink-0 text-white" />
+            Ingen reseavgift – du betalar bara för tjänsten.
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckIcon className="mt-0.5 size-4 shrink-0 text-white" />
+            {site.onSite.dropoffNote}
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckIcon className="mt-0.5 size-4 shrink-0 text-white" />
+            {site.onSite.dropoffHandover}
+          </li>
+        </ul>
       </div>
     );
   }
@@ -881,8 +925,8 @@ function SuccessPanel({
     .join(", ");
   const fee = !price.zone
     ? travelFeeText(price)
-    : price.zone.fee != null
-      ? `${formatSEK(price.zone.fee)} – ${price.zone.label.charAt(0).toLowerCase()}${price.zone.label.slice(1)}`
+    : price.feeKnown
+      ? `${formatSEK(price.fee)} – ${price.zone.label.charAt(0).toLowerCase()}${price.zone.label.slice(1)}`
       : "Bekräftas utifrån adressen";
 
   return (
@@ -921,7 +965,7 @@ function SuccessPanel({
         />
         <SummaryRow label="Önskad dag och tid" value={when || "–"} />
         <SummaryRow label="Upplägg" value={price.arrangement?.label ?? "–"} />
-        {values.location && <SummaryRow label="Adress" value={values.location} />}
+        {values.location && locationRequired(values.arrangement) && <SummaryRow label="Adress" value={values.location} />}
         <SummaryRow label="Reseavgift" value={fee} />
         <SummaryRow
           label="Preliminärt pris"

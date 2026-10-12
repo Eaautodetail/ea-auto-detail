@@ -7,8 +7,8 @@ No paid services required. The only runtime dependency besides Next.js/React is 
 
 | Route | Content |
 | --- | --- |
-| `/` | Hero, services & prices, travel fees, mobile service vs pickup, before/after gallery, why us, how booking works, hours/payment/response time, FAQ, contact + booking form |
-| `/tjanster` | Services & prices, travel fees by distance and a total-price table (`#totalpris`), mobile service vs pickup, payment, hours |
+| `/` | Hero, services & prices, travel fees, mobile service vs pickup vs drop-off, before/after gallery, why us, how booking works, hours/payment/response time, FAQ, contact + booking form |
+| `/tjanster` | Services & prices, travel fees per arrangement and distance and a total-price table (`#totalpris`), mobile service vs pickup vs drop-off, payment, hours |
 | `/galleri` | Before/after gallery with interior/exterior filter and drag/keyboard slider |
 | `/boka` | Booking request form (`?tjanst=exterior|interior|complete` preselects a service) |
 | `/om-oss` | About the two founders |
@@ -42,7 +42,11 @@ Everything business-related lives in **`src/config/site.ts`**:
 - `hours` – working days and the current season (`currentSeason: "winter" | "summer"`); the booking form's start times
   follow it. Only start times where the chosen service (its `maxMinutes`) ends before closing time are offered, in the
   form and on the server.
-- `travelZones`, `arrangements` (mobile service / pickup), `onSite` (what is needed on site), `payment`.
+- `TRAVEL_FEE` is per arrangement (`visit` = mobile service, `pickup` = pickup and return) and zone (`near`/`far`);
+  `TRAVEL_KM` holds the zone limits. `travelZones` reads its fees from there; `travelFee(arrangement, zone)` gives the
+  fee (0 for drop-off, `null` when it must be confirmed).
+- `arrangements` (mobile service / pickup / drop-off – `feeApplies: false` means no address, zone or travel fee),
+  `onSite` (what is needed on site, drop-off notes), `payment`.
 - `social` – TikTok / Instagram / Facebook URLs.
 - `services[]` – price, what is included, approximate time (`duration` text + `maxMinutes`, the upper bound in
   minutes) and on-site needs (water/electricity) per service.
@@ -93,7 +97,7 @@ can be deleted. The hero graphic is still a drawn placeholder until `heroImage` 
 3. **The customer gets an automatic receipt** (“Vi har tagit emot din bokningsförfrågan”). It says clearly that the
    time is **not confirmed yet**, and contains the reference, service and price, travel fee (or “bekräftas av oss” when
    the customer chose *Vet inte*), arrangement, address, wished date/time, “Vi återkommer så snabbt vi kan – alltid inom
-   24 timmar.”, what is needed on site (mobile service) or the pickup note, payment (Swish/kontanter, on site after the
+   24 timmar.”, what is needed on site (mobile service), the pickup note or the drop-off note (address sent when confirmed), payment (Swish/kontanter, on site after the
    job) and your phone number and social links. It is only sent when customer e-mail is possible (see table); if it
    fails, the request still succeeds (`customerEmailSent: false`), the success page tells the customer that no e-mail
    copy was sent, and you get a short separate e-mail saying the receipt did not go out.
@@ -175,7 +179,7 @@ after **60 days**.
 `BOOKING_WEBHOOK_URL` (+ optional `BOOKING_WEBHOOK_SECRET`, sent as `X-Webhook-Secret`) receives a JSON `POST` per
 request: `type: "booking_request"`, `status: "unconfirmed"`, `reference`, `receivedAt`,
 `customer {name, phone, email}`, `vehicle`, `service {id, name, price}`, `arrangement {id, label}`, `address`,
-`travel {zone, label, fee}` (`fee: null` = to be confirmed), `preferredDate`, `preferredTime`, `estimatedTotal`,
+`travel {zone, label, fee}` (`fee: null` = to be confirmed; `travel: null` for drop-off), `travelFee` (0 for drop-off), `preferredDate`, `preferredTime`, `estimatedTotal`,
 `feeConfirmed`, `currency`, `message`, `summary` (plain text) and `photos[]` (base64). Works with Make, Zapier, n8n or a
 Google Apps Script that appends to a Google Sheet. It can be used instead of, or together with, e-mail.
 
@@ -216,8 +220,7 @@ no analytics tool or cookie-consent solution has been chosen. Each event is also
 ## SEO
 
 - Swedish titles/descriptions per page, Open Graph/Twitter tags and a generated share image.
-- Targets: bilvård, biltvätt, invändig bilrengöring, utvändig biltvätt, mobil bilvård, plus Kristianstad (and Åhus as an
-  example within the service area).
+- Targets: bilvård, biltvätt, invändig bilrengöring, utvändig biltvätt, mobil bilvård, plus Kristianstad.
 - `robots.txt` **blocks indexing until `NEXT_PUBLIC_ALLOW_INDEXING=true`** so an unfinished site doesn't end up in Google.
 - `LocalBusiness` (AutoWash) structured data (no street address, hours from the current season) renders **only** when
   the site URL is a real https address and a phone number is set.
