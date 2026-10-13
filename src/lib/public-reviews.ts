@@ -1,5 +1,5 @@
 /**
- * Recensionerna som visas på sidan: bara 4–5 stjärnor och inte dolda.
+ * Recensionerna som visas på sidan: alla som inte har dolts.
  * Cachas och uppdateras direkt när en recension skickas eller döljs
  * (revalidateTag("reviews") i API:t), annars senast efter en timme.
  * Endast server.

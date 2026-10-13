@@ -33,9 +33,8 @@ export default function ReviewsPage() {
           <ReviewList />
         </Suspense>
         <p className="mt-8 max-w-2xl text-sm leading-relaxed text-mist-400">
-          Alla kan lämna en recension, även utan att ha bokat via hemsidan. Vi läser alla och visar de med 4 eller 5
-          stjärnor här. Märkningen ”Bokade via hemsidan” betyder att recensionen kom via länken vi mejlar efter en
-          bokning.
+          Alla kan lämna en recension, även utan att ha bokat via hemsidan. Märkningen ”Bokade via hemsidan” betyder
+          att recensionen kom via länken vi mejlar efter en bokning.
         </p>
       </Section>
 

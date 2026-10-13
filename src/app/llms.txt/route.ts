@@ -42,6 +42,7 @@ export function GET() {
     ...site.arrangements.map((a) => `- ${a.label}: ${a.description}`),
     ...site.services.map((s) => `- Krav vid mobil bilvård, ${s.name.toLowerCase()}: ${onSiteNeeds(s.id).join("; ")}`),
     `- ${site.onSite.mat}`,
+    `- ${site.onSite.belongings.title}: ${site.onSite.belongings.text}`,
     `- ${site.onSite.pickupNote}`,
     `- ${site.onSite.dropoffNote} ${site.onSite.dropoffHandover}`,
     "",

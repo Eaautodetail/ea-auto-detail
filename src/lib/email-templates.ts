@@ -199,6 +199,15 @@ const timeText = (time: string) => (time === "Flexibel" ? "flexibel tid" : `kl. 
  * bekräftelse – vid "Lämna bilen hos oss" skickas adressen först när tiden bekräftas.
  */
 function onSiteBlocks(serviceId: string, arrangementId: string, stage: "receipt" | "confirmed"): Block[] {
+  return [...arrangementBlocks(serviceId, arrangementId, stage), belongingsBlock()];
+}
+
+/** Gäller alla upplägg: töm bilen innan vi börjar. */
+function belongingsBlock(): Block {
+  return { kind: "notice", tone: "soft", title: site.onSite.belongings.title, text: site.onSite.belongings.text };
+}
+
+function arrangementBlocks(serviceId: string, arrangementId: string, stage: "receipt" | "confirmed"): Block[] {
   if (arrangementId === "visit") {
     return [
       { kind: "list", title: "Det här behöver vi på plats", items: onSiteNeeds(serviceId) },
@@ -450,8 +459,8 @@ export function newReviewBusinessEmail(
     {
       kind: "notice",
       tone: shown ? "strong" : "soft",
-      title: shown ? "Visas nu på hemsidan" : "Visas inte på hemsidan (under 4 stjärnor)",
-      text: shown ? undefined : "Den är sparad. Hör gärna av er till kunden om ni vet vem det är.",
+      title: shown ? "Visas nu på hemsidan" : "Visas inte på hemsidan",
+      text: shown && r.rating <= 3 ? "Ett lågt betyg – hör gärna av er till kunden om ni vet vem det är." : undefined,
     },
     {
       kind: "rows",

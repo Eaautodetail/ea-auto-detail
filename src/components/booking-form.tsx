@@ -33,6 +33,7 @@ import { track } from "@/lib/analytics";
 import { CheckIcon } from "@/components/ui";
 import { ContactDetails } from "@/components/contact-details";
 import { SocialLinks } from "@/components/social-links";
+import { BelongingsNote } from "@/components/on-site-info";
 import {
   ClockIcon,
   FieldError,
@@ -473,6 +474,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
           <div aria-live="polite">
             <ArrangementInfo arrangement={values.arrangement} service={selectedService} />
           </div>
+          <BelongingsNote className="mt-5" />
 
           {locationRequired(values.arrangement) && (
             <>
@@ -671,7 +673,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
             id={fieldId("message")}
             name="message"
             label="Kommentar om bilens skick eller särskilda önskemål"
-            hint="T.ex. om bilen är extra smutsig, har fläckar eller om det är något särskilt vi bör veta."
+            hint="T.ex. om bilen är extra smutsig, har fläckar, eller om det finns saker i bilen som ska ligga kvar och som vi inte ska röra."
             value={values.message}
             onChange={(v) => update("message", v)}
             onBlur={() => blur("message")}

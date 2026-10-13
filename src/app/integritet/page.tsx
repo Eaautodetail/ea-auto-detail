@@ -119,8 +119,7 @@ export default function PrivacyPage() {
             <h2>Recensioner och recensionsmejl</h2>
             <p>
               När du lämnar en recension sparar vi betyget, texten, namnet du skriver och eventuellt vald tjänst.
-              Recensioner med 4 eller 5 stjärnor visas på webbplatsen med det namn du angav. Alla recensioner läses av
-              oss. Den rättsliga grunden är ditt samtycke, som du kan ta tillbaka – kontakta oss så tar vi bort
+              Recensionen visas på webbplatsen med det namn du angav. Den rättsliga grunden är ditt samtycke, som du kan ta tillbaka – kontakta oss så tar vi bort
               recensionen.
             </p>
             <p>

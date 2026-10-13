@@ -10,7 +10,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { site } from "@/config/site";
 import {
-  PUBLIC_MIN_RATING,
   REVIEW_LIMITS,
   STAR_LABELS,
   reviewFieldOrder,
@@ -111,7 +110,7 @@ export function ReviewForm() {
     }
     if (res.ok) {
       setStatus({ state: "sent", rating: Number(values.rating) });
-      if (Number(values.rating) >= PUBLIC_MIN_RATING) router.refresh();
+      router.refresh();
     } else {
       if (res.errors) setErrors(res.errors);
       setStatus({ state: "error", code: res.code, message: res.message });
@@ -123,7 +122,7 @@ export function ReviewForm() {
   const shownRating = hover || rating;
 
   if (status.state === "sent") {
-    const good = status.rating >= PUBLIC_MIN_RATING;
+    const good = status.rating >= 4;
     return (
       <div ref={resultRef} tabIndex={-1} role="status" className="rounded-2xl border border-white/20 bg-ink-850 p-6 outline-none sm:p-8">
         <span className="grid size-11 place-items-center rounded-full bg-white text-black">
@@ -133,7 +132,7 @@ export function ReviewForm() {
         <p className="mt-3 max-w-xl leading-relaxed text-mist-200">
           {good
             ? "Vi blir jätteglada. Din recension syns nu bland de andra här på sidan."
-            : `Tack för att du tog dig tid. Vi läser alla omdömen och tar dem på allvar. Vill du berätta mer, ring eller sms:a oss på ${site.contact.phone}.`}
+            : `Din recension syns nu här på sidan. Vi tar alla omdömen på allvar – vill du berätta mer, ring eller sms:a oss på ${site.contact.phone}.`}
         </p>
       </div>
     );

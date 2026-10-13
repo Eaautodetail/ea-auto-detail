@@ -162,6 +162,21 @@ export function ArrangementComparison({ headingLevel: H = "h3" }: { headingLevel
           </div>
         </article>
       )}
+
+      <BelongingsNote className="reveal md:col-span-2 lg:col-span-3" />
+    </div>
+  );
+}
+
+/** Gäller alla upplägg: töm bilen innan vi börjar. */
+export function BelongingsNote({ className = "" }: { className?: string }) {
+  return (
+    <div className={`flex items-start gap-4 rounded-2xl border border-white/15 bg-white/[0.04] p-5 sm:p-6 ${className}`}>
+      <IconBadge name="info" />
+      <div>
+        <p className="font-display text-lg font-bold text-white">{site.onSite.belongings.title}</p>
+        <p className="mt-1 text-sm leading-relaxed text-mist-200 sm:text-base">{site.onSite.belongings.text}</p>
+      </div>
     </div>
   );
 }

@@ -1,9 +1,8 @@
 /**
  * Tar emot recensioner från formuläret på /recensioner.
  *
- * Alla recensioner sparas. Bara de med minst 4 stjärnor visas på sidan
- * (se src/lib/reviews.ts). Företaget får ett mejl om varje ny recension,
- * med en länk för att dölja den om den är spam eller olämplig.
+ * Alla recensioner sparas och visas på sidan. Företaget får ett mejl om varje
+ * ny recension, med en länk för att dölja den om den är spam eller olämplig.
  *
  * Kommer recensionen via länken i recensionsmejlet (`invite`) markeras den
  * som lämnad av en kund som har bokat – länken fungerar en gång.
@@ -77,7 +76,7 @@ export async function POST(request: Request) {
     const mail = emailConfig();
     if (mail.canNotifyBusiness && mail.businessRecipients.length) {
       const shown = isPublic(review);
-      const hideToken = shown ? signLink("hide", { id: review.id }, 365) : null;
+      const hideToken = signLink("hide", { id: review.id }, 365);
       const hideLink = hideToken ? `${publicOrigin(request)}/recensioner/dolj#t=${hideToken}` : null;
       await sendEmail({ to: mail.businessRecipients, ...newReviewBusinessEmail(review, shown, hideLink) }, mail).catch((e) =>
         console.error("[reviews] mejl om ny recension kunde inte skickas:", describeDeliveryError(e)),

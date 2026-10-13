@@ -2,12 +2,10 @@
  * Recensioner – typer och validering. Används både i webbläsaren
  * (formuläret) och på servern (API:t). Inga hemligheter här.
  *
- * Alla recensioner sparas. På sidan visas bara de med minst
- * `PUBLIC_MIN_RATING` stjärnor (och som inte har dolts av oss).
+ * Alla recensioner sparas och visas på sidan, utom de som vi har dolt
+ * (t.ex. spam eller olämpligt innehåll).
  */
 import { site } from "@/config/site";
-
-export const PUBLIC_MIN_RATING = 4;
 
 export const REVIEW_LIMITS = { nameMin: 2, nameMax: 40, textMin: 10, textMax: 800 } as const;
 
@@ -39,7 +37,7 @@ export type ReviewResponse =
   | { ok: true }
   | { ok: false; code: string; message: string; errors?: ReviewErrors };
 
-export const isPublic = (r: Pick<Review, "rating" | "hidden">) => !r.hidden && r.rating >= PUBLIC_MIN_RATING;
+export const isPublic = (r: Pick<Review, "hidden">) => !r.hidden;
 
 /** Tar bort styrtecken, riktningsmarkeringar och onödiga mellanslag. */
 export function cleanReviewText(value: string, { multiline = false } = {}) {

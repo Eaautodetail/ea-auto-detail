@@ -1,6 +1,6 @@
 /**
- * Visning av recensioner (server). Bara 4–5 stjärnor och inga dolda –
- * urvalet görs i src/lib/public-reviews.ts. Finns inga än visas en ärlig
+ * Visning av recensioner (server). Alla utom de vi har dolt –
+ * se src/lib/public-reviews.ts. Finns inga än visas en ärlig
  * tom-ruta, aldrig påhittade recensioner.
  */
 import Link from "next/link";

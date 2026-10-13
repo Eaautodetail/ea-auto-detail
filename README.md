@@ -270,7 +270,7 @@ under Vercel's request size limit.
 
 ## Recensioner
 
-- `/recensioner` visar recensioner med 4–5 stjärnor och har ett formulär där vem som helst kan lämna en recension.
+- `/recensioner` visar alla recensioner (utom dolda) och har ett formulär där vem som helst kan lämna en recension.
   Alla recensioner sparas; företaget får ett mejl om varje ny, med en länk för att dölja den (spam e.d.).
 - Startsidan visar de tre senaste under "Vad säger kunderna?".
 - När en tid bekräftas på `/hantera` planeras ett mejl till kunden dagen efter den bokade tiden med en länk

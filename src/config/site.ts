@@ -305,6 +305,11 @@ export const site = {
     /** Visas vid mobil bilvård för den som saknar vatten, el eller plats. */
     atOurPlaceNote:
       "Välj hämtning och lämning eller lämna bilen hos oss – då gör vi jobbet hos oss och du behöver inte ordna vatten, el eller tvättplats.",
+    /** Gäller alla upplägg: bilen ska vara tömd innan vi hämtar den eller börjar jobbet. */
+    belongings: {
+      title: "Töm bilen innan vi börjar",
+      text: "Ta ut allt du vill behålla ur bilen innan vi hämtar den eller börjar arbetet. Det som ligger kvar i bilen slänger vi. Finns det något som ska ligga kvar, eller något vi inte ska röra? Berätta det för oss i förväg – skriv det i bokningsförfrågan eller säg det till oss – så låter vi det vara helt orört.",
+    },
   },
 
   /**
@@ -629,6 +634,11 @@ function buildFaq(): Faq[] {
           },
         ]
       : []),
+    {
+      id: "toma-bilen",
+      question: "Behöver jag tömma bilen innan?",
+      answer: `Ja. ${onSite.belongings.text}`,
+    },
     {
       id: "extra-smutsig",
       question: "Vad händer om bilen är extra smutsig?",
