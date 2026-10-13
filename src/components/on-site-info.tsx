@@ -30,7 +30,7 @@ export function UtilityIcons({ service, className = "size-4" }: { service: Servi
   );
 }
 
-/** Reseavgiften för ett upplägg, t.ex. "inom ca 5 km 150 kr · 5–15 km 250 kr". */
+/** Reseavgiften för ett upplägg, t.ex. "inom ca 5 km 150 kr · 5–20 km 250 kr". */
 function FeeFootnote({ arrangement }: { arrangement: FeeArrangement | null }) {
   return (
     <p className="mt-6 border-t border-white/10 pt-4 text-sm text-mist-300">

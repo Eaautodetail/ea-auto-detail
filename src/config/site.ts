@@ -28,7 +28,7 @@ const TRAVEL_FEE = {
 } as const;
 
 /** Hur långt vi åker, i km från Kristianstad. */
-const TRAVEL_KM = { near: 5, max: 15 } as const;
+const TRAVEL_KM = { near: 5, max: 20 } as const;
 
 /** Arbetstider per säsong. Byt `currentSeason` längre ned när säsongen skiftar. */
 const SEASONS = {
@@ -414,7 +414,7 @@ export const feeArrangements = site.arrangements.filter(
   (a): a is ArrangementInfo & { id: FeeArrangement } => a.feeApplies && a.id in TRAVEL_FEE,
 );
 
-/** Zoner med fast avgift ("Inom ca 5 km", "5–15 km"). */
+/** Zoner med fast avgift ("Inom ca 5 km", "5–20 km"). */
 export const pricedZones = site.travelZones.filter(
   (z): z is TravelZone & { fees: Record<FeeArrangement, number> } => z.fees != null,
 );
@@ -450,7 +450,7 @@ export function arrangementNeedsLocation(arrangementId: string | null | undefine
   return !!getArrangement(arrangementId)?.feeApplies;
 }
 
-/** "150 kr inom ca 5 km från Kristianstad och 250 kr för 5–15 km" för ett upplägg. */
+/** "150 kr inom ca 5 km från Kristianstad och 250 kr för 5–20 km" för ett upplägg. */
 export function zoneFeesText(arrangementId: FeeArrangement): string {
   return listText(
     pricedZones.map((z, i) =>
