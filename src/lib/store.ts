@@ -13,11 +13,28 @@ type Env = Record<string, string | undefined>;
 
 export type StoreConfig = { url: string; token: string };
 
+/**
+ * Vercel kan lägga ett eget prefix på variablerna (t.ex. STORAGE_KV_REST_API_URL),
+ * så vi letar efter alla par som slutar på KV_REST_API_URL/_TOKEN eller
+ * UPSTASH_REDIS_REST_URL/_TOKEN.
+ */
+const PAIRS = [
+  ["KV_REST_API_URL", "KV_REST_API_TOKEN"],
+  ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
+] as const;
+
 export function storeConfig(env: Env = process.env): StoreConfig | null {
-  const url = (env.KV_REST_API_URL || env.UPSTASH_REDIS_REST_URL)?.trim();
-  const token = (env.KV_REST_API_TOKEN || env.UPSTASH_REDIS_REST_TOKEN)?.trim();
-  if (!url || !token || !/^https?:\/\//.test(url)) return null;
-  return { url: url.replace(/\/+$/, ""), token };
+  for (const [urlSuffix, tokenSuffix] of PAIRS) {
+    const keys = Object.keys(env)
+      .filter((k) => k.endsWith(urlSuffix))
+      .sort((a, b) => a.length - b.length); // Utan prefix först.
+    for (const key of keys) {
+      const url = env[key]?.trim();
+      const token = env[key.slice(0, -urlSuffix.length) + tokenSuffix]?.trim();
+      if (url && token && /^https?:\/\//.test(url)) return { url: url.replace(/\/+$/, ""), token };
+    }
+  }
+  return null;
 }
 
 export class StoreError extends Error {}
