@@ -285,7 +285,7 @@ function EmailUnavailable({ booking, reason }: { booking: ManagedBooking; reason
 type Status =
   | { state: "idle" }
   | { state: "sending" }
-  | { state: "sent"; sentTo: string; headline: string; copyToBusiness: boolean }
+  | { state: "sent"; sentTo: string; headline: string; copyToBusiness: boolean; reviewRequestPlanned: boolean }
   | { state: "error"; code: string; message: string };
 
 const fieldOrder: ConfirmField[] = ["date", "time", "price", "message"];
@@ -326,7 +326,13 @@ function ConfirmForm({ token, booking }: { token: string; booking: ManagedBookin
     setStatus({ state: "sending" });
     const res = await postJson<ConfirmBookingResponse>("/api/booking/confirm", { token, ...values });
     if (res.ok) {
-      setStatus({ state: "sent", sentTo: res.sentTo, headline: res.headline, copyToBusiness: res.copyToBusiness });
+      setStatus({
+        state: "sent",
+        sentTo: res.sentTo,
+        headline: res.headline,
+        copyToBusiness: res.copyToBusiness,
+        reviewRequestPlanned: res.reviewRequestPlanned,
+      });
     } else {
       if ("errors" in res && res.errors) setErrors(res.errors);
       setStatus({ state: "error", code: res.code, message: res.message });
@@ -350,6 +356,11 @@ function ConfirmForm({ token, booking }: { token: string; booking: ManagedBookin
           Mejlet ”Din tid är bekräftad: {status.headline}” har skickats till{" "}
           <strong className="text-white [overflow-wrap:anywhere]">{status.sentTo}</strong>.
           {status.copyToBusiness && " En kopia har skickats till er inkorg."}
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-mist-300">
+          {status.reviewRequestPlanned
+            ? "Dagen efter den bokade tiden får kunden automatiskt ett mejl med en länk för att lämna en recension."
+            : "Inget recensionsmejl är planerat, eftersom lagringen för recensioner inte är inkopplad ännu."}
         </p>
         <button
           type="button"

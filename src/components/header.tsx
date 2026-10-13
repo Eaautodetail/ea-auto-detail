@@ -75,7 +75,7 @@ export function Header() {
           <Logo />
         </Link>
 
-        <nav aria-label="Huvudmeny" className="hidden lg:block">
+        <nav aria-label="Huvudmeny" className="hidden xl:block">
           <ul className="flex items-center gap-1">
             {navigation.map((item) => {
               const active = pathname === item.href;
@@ -84,7 +84,7 @@ export function Header() {
                   <Link
                     href={item.href}
                     aria-current={active ? "page" : undefined}
-                    className={`rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
+                    className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
                       active ? "text-white" : "text-mist-300 hover:text-white"
                     }`}
                   >
@@ -110,7 +110,7 @@ export function Header() {
           <button
             ref={menuButton}
             type="button"
-            className="grid size-11 place-items-center rounded-full border border-white/15 text-white lg:hidden"
+            className="grid size-11 place-items-center rounded-full border border-white/15 text-white xl:hidden"
             aria-expanded={open}
             aria-controls="mobilmeny"
             onClick={() => setOpen((v) => !v)}
@@ -136,7 +136,7 @@ export function Header() {
         id="mobilmeny"
         ref={panel}
         hidden={!open}
-        className="h-[calc(100dvh-4.5rem)] overflow-y-auto border-t border-white/10 bg-ink-950 lg:hidden"
+        className="h-[calc(100dvh-4.5rem)] overflow-y-auto border-t border-white/10 bg-ink-950 xl:hidden"
       >
         <nav aria-label="Mobilmeny" className="mx-auto flex max-w-6xl flex-col px-5 py-6 sm:px-8">
           <ul className="flex flex-col">

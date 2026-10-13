@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { site, travelFeeFrom } from "@/config/site";
 import { Hero } from "@/components/hero";
 import { PricingTerms, ServiceCards } from "@/components/services";
@@ -11,6 +12,7 @@ import { ContactDetails, ResponseTimeCard } from "@/components/contact-details";
 import { OpeningHours } from "@/components/hours";
 import { PaymentInfo } from "@/components/payment-info";
 import { BookingForm } from "@/components/booking-form";
+import { ReviewList } from "@/components/reviews";
 import { formatSEK } from "@/lib/format";
 import { ArrowIcon, Eyebrow, Section, SectionHeading } from "@/components/ui";
 
@@ -77,7 +79,27 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section id="varfor" labelledBy="varfor-rubrik" className="border-t border-white/10 bg-ink-900">
+      <Section id="recensioner" labelledBy="recensioner-rubrik" className="border-t border-white/10 bg-ink-900">
+        <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+          <SectionHeading
+            id="recensioner-rubrik"
+            eyebrow="Recensioner"
+            title="Vad säger kunderna?"
+            intro="Omdömen från kunder som har anlitat oss."
+          />
+          <div className="flex shrink-0 flex-wrap gap-x-6 gap-y-3">
+            <MoreLink href="/recensioner">Alla recensioner</MoreLink>
+            <MoreLink href="/recensioner#skriv">Lämna en recension</MoreLink>
+          </div>
+        </div>
+        <div className="mt-12">
+          <Suspense fallback={<div className="h-48 rounded-2xl border border-white/10 bg-ink-850/60" />}>
+            <ReviewList limit={3} />
+          </Suspense>
+        </div>
+      </Section>
+
+      <Section id="varfor" labelledBy="varfor-rubrik">
         <SectionHeading
           id="varfor-rubrik"
           eyebrow="Varför EA Auto Detail"
@@ -89,7 +111,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section id="sa-funkar-det" labelledBy="steg-rubrik">
+      <Section id="sa-funkar-det" labelledBy="steg-rubrik" className="border-t border-white/10 bg-ink-900">
         <SectionHeading
           id="steg-rubrik"
           eyebrow="Så bokar du"
@@ -106,7 +128,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section id="foljoss" labelledBy="social-rubrik" className="border-t border-white/10 bg-ink-900">
+      <Section id="foljoss" labelledBy="social-rubrik">
         <div className="reveal grid gap-8 rounded-3xl border border-white/10 bg-ink-850 p-7 sm:p-12 md:grid-cols-[1.3fr_1fr] md:items-center">
           <div>
             <Eyebrow className="mb-4">Följ oss</Eyebrow>
@@ -121,7 +143,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section id="faq" labelledBy="faq-rubrik">
+      <Section id="faq" labelledBy="faq-rubrik" className="border-t border-white/10 bg-ink-900">
         <div className="grid gap-12 lg:grid-cols-[1fr_1.6fr]">
           <div>
             <SectionHeading id="faq-rubrik" eyebrow="Vanliga frågor" title="Bra att veta." />
@@ -133,7 +155,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      <Section id="boka" labelledBy="boka-rubrik" className="border-t border-white/10 bg-ink-900">
+      <Section id="boka" labelledBy="boka-rubrik">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
           <SectionHeading
             id="boka-rubrik"

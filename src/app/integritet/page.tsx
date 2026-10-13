@@ -101,7 +101,8 @@ export default function PrivacyPage() {
           <section className="space-y-3">
             <h2>Hur hanteras förfrågan?</h2>
             <p>
-              Webbplatsen sparar inte förfrågan i någon databas och personuppgifter loggas inte på servern.
+              Webbplatsen sparar inte förfrågan i någon databas och personuppgifter loggas inte på servern. (Undantaget
+              är uppgifterna för recensionsmejlet, se nedan.)
               {mail.canNotifyBusiness
                 ? " Förfrågan skickas som e-post till oss, med eventuella bilder som bilagor."
                 : webhookConfigured
@@ -111,6 +112,22 @@ export default function PrivacyPage() {
               {mail.canNotifyBusiness &&
                 webhookConfigured &&
                 " Förfrågan förs också över till det verktyg vi använder för att hålla ordning på bokningarna."}
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2>Recensioner och recensionsmejl</h2>
+            <p>
+              När du lämnar en recension sparar vi betyget, texten, namnet du skriver och eventuellt vald tjänst.
+              Recensioner med 4 eller 5 stjärnor visas på webbplatsen med det namn du angav. Alla recensioner läses av
+              oss. Den rättsliga grunden är ditt samtycke, som du kan ta tillbaka – kontakta oss så tar vi bort
+              recensionen.
+            </p>
+            <p>
+              När vi har bekräftat en bokning sparar vi ditt namn, din e-postadress, tjänsten och datumet för att skicka
+              ett mejl dagen efter den bokade tiden, där vi frågar om du vill lämna en recension. Du får det mejlet en
+              gång. Uppgifterna raderas när mejlet har skickats och senast två veckor efter den bokade tiden. Den
+              rättsliga grunden är vårt berättigade intresse av att följa upp jobbet.
             </p>
           </section>
 
@@ -138,6 +155,7 @@ export default function PrivacyPage() {
                   )}
                 </li>
               )}
+              <li>Lagring av recensioner och planerade recensionsmejl: Upstash (databastjänst).</li>
               <li>
                 Webbhotell: den tjänst som driver webbplatsen tar emot förfrågan och skickar den vidare.
                 {show && (

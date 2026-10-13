@@ -267,3 +267,14 @@ under Vercel's request size limit.
   the e-mail templates (escaping, content) and the `/hantera` page logic (jsdom).
 - **Not tested:** delivery through the real Gmail SMTP server or Resend (no credentials available), and a real deployment.
   Send yourself one test booking after setting the variables.
+
+## Recensioner
+
+- `/recensioner` visar recensioner med 4–5 stjärnor och har ett formulär där vem som helst kan lämna en recension.
+  Alla recensioner sparas; företaget får ett mejl om varje ny, med en länk för att dölja den (spam e.d.).
+- Startsidan visar de tre senaste under "Vad säger kunderna?".
+- När en tid bekräftas på `/hantera` planeras ett mejl till kunden dagen efter den bokade tiden med en länk
+  till formuläret. Vercel Cron (`vercel.json`) kör `/api/cron/review-requests` varje morgon kl. 08 UTC.
+  Kundens uppgifter raderas när mejlet har skickats.
+- Lagring: Upstash Redis (`KV_REST_API_URL`, `KV_REST_API_TOKEN`), se `.env.example`. Utan den visar sidan
+  ett ärligt besked i stället för formuläret och inga recensionsmejl planeras.

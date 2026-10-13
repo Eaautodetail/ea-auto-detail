@@ -69,3 +69,6 @@ changing them: the site address and the e-mail provider named on `/integritet` a
 - Machine polishing, paint correction or other advanced treatments: not offered.
 - Reviews, guarantees, discounts or certifications: none are shown until real ones are supplied.
 - No online calendar: a request is not a booking until you have confirmed the time.
+
+- [ ] Reviews: connect Upstash for Redis in Vercel (Storage → Upstash → Connect Project), then redeploy. Until then
+      /recensioner says reviews can't be left yet and no review-request emails are scheduled.

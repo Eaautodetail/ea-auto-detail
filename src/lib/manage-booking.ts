@@ -18,7 +18,7 @@ export type ConfirmField = "date" | "time" | "price" | "message";
 export type ConfirmErrors = Partial<Record<ConfirmField, string>>;
 
 export type ConfirmBookingResponse =
-  | { ok: true; sentTo: string; headline: string; copyToBusiness: boolean }
+  | { ok: true; sentTo: string; headline: string; copyToBusiness: boolean; reviewRequestPlanned: boolean }
   | { ok: false; code: string; message: string; errors?: ConfirmErrors };
 
 export const CONFIRM_LIMITS = { messageMax: 1000, priceMax: 100_000 } as const;

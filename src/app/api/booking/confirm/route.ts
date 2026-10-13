@@ -12,6 +12,7 @@ import { describeDeliveryError, emailConfig, isSafeRecipient, sendEmail } from "
 import { confirmationHeadline, customerConfirmationEmail } from "@/lib/email-templates";
 import { clientIp, createRateLimiter, json, readJsonBody } from "@/lib/http";
 import { validateConfirmation, type ConfirmBookingResponse } from "@/lib/manage-booking";
+import { reviewsEnabled, scheduleReviewRequest } from "@/lib/reviews-store";
 
 // Körs i Node.js-runtime (standard i Next 16; nodemailer kräver det). `export const runtime`
 // får inte anges när cacheComponents är på.
@@ -85,10 +86,28 @@ export async function POST(request: Request) {
     );
   }
 
+  // Recensionsmejl dagen efter den bekräftade tiden (skickas av /api/cron/review-requests).
+  let reviewRequestPlanned = false;
+  if (reviewsEnabled()) {
+    try {
+      await scheduleReviewRequest({
+        reference: booking.reference,
+        name: booking.name,
+        email: booking.email,
+        service: booking.service,
+        date: value.date,
+      });
+      reviewRequestPlanned = true;
+    } catch (error) {
+      console.error("[booking] recensionsmejl kunde inte planeras:", error instanceof Error ? error.message : "okänt fel");
+    }
+  }
+
   return json({
     ok: true,
     sentTo: booking.email,
     headline: confirmationHeadline(value.date, value.time),
     copyToBusiness,
+    reviewRequestPlanned,
   } satisfies ConfirmBookingResponse);
 }

@@ -554,6 +554,7 @@ export const socialLinks = (
 export const navigation = [
   { href: "/tjanster", label: "Tjänster & priser" },
   { href: "/galleri", label: "Galleri" },
+  { href: "/recensioner", label: "Recensioner" },
   { href: "/om-oss", label: "Om oss" },
   { href: "/vanliga-fragor", label: "Vanliga frågor" },
   { href: "/kontakt", label: "Kontakt" },

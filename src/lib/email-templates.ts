@@ -412,3 +412,60 @@ export function customerConfirmationEmail(b: BookingTokenData, c: ConfirmedDetai
     customerFooter(`Du får det här mejlet för att du har skickat en bokningsförfrågan till ${site.name} (${b.reference}).`),
   );
 }
+
+/* ------------------------------------------------------- recensioner */
+
+/** Mejlet till kunden dagen efter den bekräftade tiden. */
+export function reviewRequestEmail(r: { name: string; service: string; reference: string }, link: string): RenderedEmail {
+  const service = site.services.find((s) => s.id === r.service);
+  const subject = `Hur blev det? Lämna gärna en recension av ${site.name}`;
+  const blocks: Block[] = [
+    { kind: "heading", text: `${greeting("Hej", r.name)} Tack för att du valde oss.` },
+    {
+      kind: "paragraph",
+      text: `Vi hoppas att du är nöjd med ${service ? lowerFirst(service.name) : "jobbet"}. Vi är ett litet företag, så ditt omdöme betyder mycket – både för oss och för andra som funderar på att boka.`,
+    },
+    { kind: "button", label: "Lämna en recension", href: link, fallback: "Fungerar inte knappen? Kopiera länken:" },
+    { kind: "paragraph", text: "Det tar under en minut. Var det något som inte blev bra? Svara gärna på det här mejlet, så hör vi av oss.", muted: true },
+    { kind: "contact", intro: "Vill du boka igen eller fråga något? Kontakta oss:" },
+  ];
+  return render(
+    subject,
+    "Det tar under en minut att lämna en recension.",
+    blocks,
+    customerFooter(`Du får det här mejlet en gång, efter din bokning hos ${site.name} (${r.reference}).`),
+  );
+}
+
+/** Till oss när någon har lämnat en recension. */
+export function newReviewBusinessEmail(
+  r: { name: string; rating: number; text: string; service: string; verified: boolean },
+  shown: boolean,
+  hideLink: string | null,
+): RenderedEmail {
+  const service = site.services.find((s) => s.id === r.service);
+  const stars = "★".repeat(r.rating) + "☆".repeat(5 - r.rating);
+  const blocks: Block[] = [
+    { kind: "heading", text: `Ny recension: ${r.rating} av 5 stjärnor` },
+    {
+      kind: "notice",
+      tone: shown ? "strong" : "soft",
+      title: shown ? "Visas nu på hemsidan" : "Visas inte på hemsidan (under 4 stjärnor)",
+      text: shown ? undefined : "Den är sparad. Hör gärna av er till kunden om ni vet vem det är.",
+    },
+    {
+      kind: "rows",
+      rows: [
+        ["Betyg", stars],
+        ["Namn", cleanText(r.name)],
+        ...(service ? ([["Tjänst", service.name]] as [string, string][]) : []),
+        ["Från", r.verified ? "Kund som bokat via hemsidan (länk i mejl)" : "Formuläret på hemsidan"],
+      ],
+    },
+    { kind: "pre", text: cleanText(r.text, { multiline: true }) },
+    ...(hideLink
+      ? [{ kind: "button", label: "Dölj recensionen", href: hideLink, fallback: "Är den spam eller olämplig? Öppna länken och tryck på Dölj:" } satisfies Block]
+      : []),
+  ];
+  return render(`Ny recension (${r.rating}/5) – ${cleanText(r.name)}`, `${stars} ${cleanText(r.text).slice(0, 80)}`, blocks, `${site.name} · recensioner`);
+}
