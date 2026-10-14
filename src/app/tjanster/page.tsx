@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getService, site, travelFeeFrom } from "@/config/site";
 import { formatSEK } from "@/lib/format";
 import { PageHero, CtaBand, HowItWorks } from "@/components/blocks";
-import { ServiceCards, ServiceNotes } from "@/components/services";
+import { ServiceCards, ServiceNotes, VehiclePriceTable } from "@/components/services";
 import { PriceTable, TravelFeeZones } from "@/components/travel-fees";
 import { ArrangementComparison } from "@/components/on-site-info";
 import { OpeningHours } from "@/components/hours";
@@ -32,6 +32,14 @@ export default function ServicesPage() {
           Våra tjänster
         </h2>
         <ServiceCards />
+        <div id="fordonstyp" className="reveal mt-14 scroll-mt-28">
+          <h2 className="font-display text-2xl font-bold text-white sm:text-3xl">Pris per fordonstyp</h2>
+          <p className="mt-3 max-w-2xl text-mist-300">
+            Vi tar alla typer av fordon. Större fordon tar längre tid och kostar därför lite mer. Reseavgift tillkommer
+            enligt nedan.
+          </p>
+          <VehiclePriceTable className="mt-6 max-w-3xl" />
+        </div>
       </Section>
 
       <Section id="reseavgift" labelledBy="reseavgift-rubrik" className="border-t border-white/10 bg-ink-900">

@@ -18,6 +18,23 @@ import { formatSEK } from "@/lib/format";
 const PRICE = { exterior: 149, interior: 249, complete: 349 } as const;
 
 /**
+ * Pris per tjänst och fordonstyp, i hela kronor. Personbil = grundpriset ovan.
+ * Större fordon tar längre tid och kostar därför lite mer. Ändra här så
+ * uppdateras tjänstekort, prislistor, bokningsformulär och mejl.
+ */
+const VEHICLE_PRICE = {
+  car: PRICE,
+  suv: { exterior: 229, interior: 339, complete: 449 },
+  van: { exterior: 249, interior: 369, complete: 499 },
+} as const;
+
+/**
+ * Extra tid i minuter för större fordon. Läggs på tjänstens `maxMinutes` och
+ * styr senaste starttid i bokningen, så att jobbet hinns med före stängning.
+ */
+const VEHICLE_EXTRA_MINUTES = { car: 0, suv: 15, van: 30 } as const;
+
+/**
  * Reseavgift i SEK per upplägg och avstånd. `near` = inom ca TRAVEL_KM.near km
  * från Kristianstad, `far` = mellan TRAVEL_KM.near och TRAVEL_KM.max km.
  * "Lämna bilen hos oss" (dropoff) är gratis och finns därför inte här.
@@ -37,6 +54,18 @@ const SEASONS = {
 } as const;
 
 export type ServiceId = "exterior" | "interior" | "complete";
+export type VehicleSizeId = keyof typeof VEHICLE_PRICE;
+
+export type VehicleSize = {
+  id: VehicleSizeId;
+  label: string;
+  /** Exempel på fordon i gruppen. */
+  description: string;
+  /** Pris per tjänst för den här fordonstypen. */
+  prices: Record<ServiceId, number>;
+  /** Extra minuter jämfört med en personbil (se VEHICLE_EXTRA_MINUTES). */
+  extraMinutes: number;
+};
 export type SeasonId = keyof typeof SEASONS;
 
 export type Service = {
@@ -173,6 +202,16 @@ export const site = {
     facebook: "https://www.facebook.com/share/1DJVY9R1bx/" as string | null,
   },
 
+  /**
+   * Google-företagsprofilen. `null` = inte verifierad ännu, då visas inget.
+   * `profile` = länk till profilen (t.ex. från "Dela profil" i Google),
+   * `review` = länk där kunder skriver ett omdöme ("Be om omdömen" i Google).
+   */
+  google: {
+    profile: null as string | null,
+    review: null as string | null,
+  },
+
   /** Vi utgår från den här orten. */
   baseTown: "Kristianstad",
 
@@ -205,6 +244,26 @@ export const site = {
       fees: null,
     },
   ] satisfies TravelZone[] as TravelZone[],
+
+  /**
+   * Orter vi åker till – var och en får en egen sida på /bilvard/<slug>.
+   * `zone` = resezonen som normalt gäller (id i `travelZones`), `null` = beror
+   * på adressen. Ta bort en ort här så försvinner dess sida. Lägg bara till
+   * orter inom ca TRAVEL_KM.max km från Kristianstad.
+   */
+  towns: [
+    { slug: "kristianstad", name: "Kristianstad", zone: null },
+    { slug: "ahus", name: "Åhus", zone: "far" },
+    { slug: "tollarp", name: "Tollarp", zone: "far" },
+    { slug: "va", name: "Vä", zone: "far" },
+    { slug: "fjalkinge", name: "Fjälkinge", zone: "far" },
+    { slug: "farlov", name: "Färlöv", zone: "far" },
+    { slug: "onnestad", name: "Önnestad", zone: "far" },
+    { slug: "everod", name: "Everöd", zone: "far" },
+    { slug: "osterslov", name: "Österslöv", zone: "far" },
+    { slug: "gards-kopinge", name: "Gärds Köpinge", zone: "far" },
+    { slug: "rinkaby", name: "Rinkaby", zone: "far" },
+  ] as { slug: string; name: string; zone: string | null }[],
 
   /** Hur långt vi åker (km från Kristianstad) och gränsen för närzonen. */
   travelMaxKm: TRAVEL_KM.max,
@@ -259,6 +318,37 @@ export const site = {
   ] satisfies Service[] as Service[],
 
   /**
+   * Fordonstyper. Priserna står i VEHICLE_PRICE överst i filen. Tjänstens
+   * `price` ovan är priset för en personbil (det lägsta priset).
+   */
+  vehicleSizes: [
+    {
+      id: "car",
+      label: "Personbil",
+      description: "T.ex. småbil, sedan, halvkombi och kombi.",
+      prices: VEHICLE_PRICE.car,
+      extraMinutes: VEHICLE_EXTRA_MINUTES.car,
+    },
+    {
+      id: "suv",
+      label: "SUV",
+      description: "T.ex. SUV, crossover och större 7-sitsiga bilar.",
+      prices: VEHICLE_PRICE.suv,
+      extraMinutes: VEHICLE_EXTRA_MINUTES.suv,
+    },
+    {
+      id: "van",
+      label: "Skåpbil",
+      description: "T.ex. skåpbil, minibuss och pickup.",
+      prices: VEHICLE_PRICE.van,
+      extraMinutes: VEHICLE_EXTRA_MINUTES.van,
+    },
+  ] satisfies VehicleSize[] as VehicleSize[],
+
+  /** Visas där fordonstypen väljs. */
+  vehicleSizeNote: "Osäker på vilken typ din bil är? Välj den som passar bäst – vi kollar och bekräftar priset innan jobbet.",
+
+  /**
    * "X kr billigare än att boka delarna var för sig" och en etikett på
    * kombinationstjänsten. Besparingen räknas fram ur priserna ovan.
    * Avstängt (`show: false`) tills ni har godkänt formuleringen.
@@ -271,7 +361,7 @@ export const site = {
 
   /** Gäller alla tjänster – visas nära priserna och i bokningen. */
   extraWorkNote:
-    "Är bilen ovanligt smutsig eller behöver extra arbete kan en extra avgift tillkomma. Du får alltid veta vad det kostar och godkänna det innan vi gör extraarbetet.",
+    "Är bilen ovanligt smutsig eller behöver extra arbete, t.ex. fläckborttagning, kan en extra avgift tillkomma. Beskriv det eller bifoga en bild i förfrågan, så får du ett pris. Du godkänner alltid priset innan vi gör extraarbetet.",
 
   arrangements: [
     {
@@ -406,6 +496,30 @@ export function getService(id: string | null | undefined): Service | undefined {
   return site.services.find((s) => s.id === id);
 }
 
+export function getVehicleSize(id: string | null | undefined): VehicleSize | undefined {
+  return site.vehicleSizes.find((v) => v.id === id);
+}
+
+/**
+ * Priset för en tjänst och fordonstyp. Utan (känd) fordonstyp används
+ * personbilspriset, t.ex. för äldre förfrågningar som saknar fordonstyp.
+ */
+export function servicePrice(serviceId: string | null | undefined, sizeId?: string | null): number {
+  const service = getService(serviceId);
+  if (!service) return 0;
+  return getVehicleSize(sizeId)?.prices[service.id] ?? service.price;
+}
+
+/** Tillägget för en större fordonstyp jämfört med personbil, t.ex. 80 (kr). */
+export function vehicleSurcharge(serviceId: string, sizeId: string): number {
+  const service = getService(serviceId);
+  return service ? servicePrice(serviceId, sizeId) - service.price : 0;
+}
+
+export function getTown(slug: string | null | undefined) {
+  return site.towns.find((t) => t.slug === slug);
+}
+
 export function getTravelZone(id: string | null | undefined) {
   return site.travelZones.find((z) => z.id === id);
 }
@@ -495,9 +609,10 @@ function fromMinutes(minutes: number) {
  * jobbet hinns med före stängning (utifrån tjänstens `maxMinutes`), annars
  * fram till en timme före stängning. Samma regel används i formuläret och på servern.
  */
-export function bookingTimes(serviceId?: string | null): string[] {
+export function bookingTimes(serviceId?: string | null, sizeId?: string | null): string[] {
   const { open, close } = currentHours();
-  const length = getService(serviceId)?.maxMinutes ?? 60;
+  const service = getService(serviceId);
+  const length = service ? (service.maxMinutes ?? 60) + (getVehicleSize(sizeId)?.extraMinutes ?? 0) : 60;
   const closeAt = toMinutes(close);
   const times: string[] = [];
   for (let t = toMinutes(open); t + length <= closeAt; t += 60) times.push(fromMinutes(t));
@@ -505,8 +620,8 @@ export function bookingTimes(serviceId?: string | null): string[] {
 }
 
 /** Senaste starttiden för en tjänst, t.ex. "16.00". `null` om ingen tid passar. */
-export function latestStartTime(serviceId?: string | null): string | null {
-  const times = bookingTimes(serviceId).filter((t) => t !== "Flexibel");
+export function latestStartTime(serviceId?: string | null, sizeId?: string | null): string | null {
+  const times = bookingTimes(serviceId, sizeId).filter((t) => t !== "Flexibel");
   return times[times.length - 1] ?? null;
 }
 
@@ -594,8 +709,18 @@ function buildFaq(): Faq[] {
       id: "vad-ingar",
       question: "Vad ingår i de olika tjänsterna?",
       answer: services
-        .map((s) => `${s.name} (${formatSEK(s.price)}): ${listText(s.includes.map(lowerFirst))}.`)
+        .map((s) => `${s.name} (${formatSEK(s.price)} för personbil): ${listText(s.includes.map(lowerFirst))}.`)
         .join(" "),
+    },
+    {
+      id: "fordonstyp",
+      question: "Kostar det mer för SUV eller skåpbil?",
+      answer: `Ja, lite mer eftersom större fordon tar längre tid. ${site.vehicleSizes
+        .map(
+          (v) =>
+            `${v.label}: ${listText(services.map((s) => `${lowerFirst(s.shortName)} ${formatSEK(v.prices[s.id])}`))}.`,
+        )
+        .join(" ")} Vi tar alla typer av fordon – är du osäker på vilken typ din bil är kollar vi och bekräftar priset innan jobbet.`,
     },
     {
       id: "hur-lang-tid",

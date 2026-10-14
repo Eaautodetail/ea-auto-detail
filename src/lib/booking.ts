@@ -9,7 +9,9 @@ import {
   getArrangement,
   getService,
   getTravelZone,
+  getVehicleSize,
   latestStartTime,
+  servicePrice,
   travelFee,
 } from "@/config/site";
 
@@ -28,6 +30,8 @@ export type BookingFields = {
   email: string;
   /** Registreringsnummer eller bilmodell. */
   vehicle: string;
+  /** Fordonstyp: "car", "suv" eller "van" (se `site.vehicleSizes`). */
+  vehicleSize: string;
   service: string;
   date: string;
   /** Önskad starttid, t.ex. "10.00" eller "Flexibel" (se `bookingTimes()`). */
@@ -48,6 +52,7 @@ export const emptyBooking: BookingFields = {
   phone: "",
   email: "",
   vehicle: "",
+  vehicleSize: "",
   service: "",
   date: "",
   time: "",
@@ -109,6 +114,9 @@ export function validateField(field: BookingField, v: BookingFields, today: stri
     case "service":
       if (!getService(value)) return "Välj en tjänst.";
       return;
+    case "vehicleSize":
+      if (!getVehicleSize(value)) return "Välj vilken typ av fordon det är.";
+      return;
     case "date": {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return "Välj ett önskat datum.";
       // Servern tillåter en dags marginal bakåt för tidszonsskillnader.
@@ -117,10 +125,10 @@ export function validateField(field: BookingField, v: BookingFields, today: stri
       return;
     }
     case "time": {
-      if (bookingTimes(v.service).includes(value)) return;
-      // En tid inom arbetstiderna som inte hinns med för vald tjänst.
+      if (bookingTimes(v.service, v.vehicleSize).includes(value)) return;
+      // En tid inom arbetstiderna som inte hinns med för vald tjänst och fordonstyp.
       const service = getService(v.service);
-      const latest = latestStartTime(v.service);
+      const latest = latestStartTime(v.service, v.vehicleSize);
       if (service && latest && bookingTimes().includes(value))
         return `Välj en starttid senast kl. ${latest} för ${service.name.toLowerCase()}, så hinner vi klart före ${currentHours().close}.`;
       return "Välj en önskad tid.";
@@ -146,12 +154,13 @@ export function validateField(field: BookingField, v: BookingFields, today: stri
 
 export const fieldOrder: BookingField[] = [
   "service",
+  "vehicleSize",
+  "vehicle",
   "arrangement",
   "location",
   "travelZone",
   "date",
   "time",
-  "vehicle",
   "name",
   "phone",
   "email",
@@ -201,13 +210,16 @@ export function validatePhotos(files: { size: number; type: string }[]): string 
 }
 
 /**
- * Prisöversikt för vald tjänst, upplägg och resezon.
+ * Prisöversikt för vald tjänst, fordonstyp, upplägg och resezon. Utan vald
+ * fordonstyp visas personbilspriset.
  * `feeKnown` är `false` när reseavgiften inte kan räknas ut ännu (upplägg eller
  * zon ej vald, eller "vet inte") – då bekräftar vi den manuellt. När kunden
  * lämnar bilen hos oss är avgiften 0 och ingen zon används.
  */
-export function priceSummary(serviceId: string, arrangementId: string, travelZoneId = "") {
+export function priceSummary(serviceId: string, arrangementId: string, travelZoneId = "", vehicleSizeId = "") {
   const service = getService(serviceId);
+  const vehicleSize = getVehicleSize(vehicleSizeId);
+  const base = servicePrice(serviceId, vehicleSizeId);
   const arrangement = getArrangement(arrangementId);
   const zone = arrangement?.feeApplies ? getTravelZone(travelZoneId) : undefined;
   const knownFee = travelFee(arrangementId, travelZoneId);
@@ -216,16 +228,22 @@ export function priceSummary(serviceId: string, arrangementId: string, travelZon
     service,
     arrangement,
     zone,
-    base: service?.price ?? 0,
+    vehicleSize,
+    base,
     fee,
     feeKnown: knownFee != null,
-    total: (service?.price ?? 0) + fee,
+    total: base + fee,
   };
 }
 
 /** Bygger en läsbar textsammanfattning av förfrågan (för mejl till företaget och webhook). */
 export function bookingAsText(v: BookingFields, reference: string, photoCount: number) {
-  const { service, arrangement, zone, base, fee, feeKnown, total } = priceSummary(v.service, v.arrangement, v.travelZone);
+  const { service, arrangement, zone, vehicleSize, base, fee, feeKnown, total } = priceSummary(
+    v.service,
+    v.arrangement,
+    v.travelZone,
+    v.vehicleSize,
+  );
   const kr = (n: number) => `${n} kr`;
   return [
     `Ny bokningsförfrågan (${reference})`,
@@ -235,6 +253,7 @@ export function bookingAsText(v: BookingFields, reference: string, photoCount: n
     `Telefon: ${v.phone}`,
     `E-post: ${v.email}`,
     `Bil: ${v.vehicle}`,
+    `Fordonstyp: ${vehicleSize?.label ?? (v.vehicleSize || "–")}`,
     `Tjänst: ${service?.name ?? v.service} (${kr(base)})`,
     `Upplägg: ${arrangement?.label ?? v.arrangement}`,
     `Adress: ${arrangement?.feeApplies === false ? "– (kunden lämnar bilen hos oss)" : v.location || "–"}`,

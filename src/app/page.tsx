@@ -3,18 +3,13 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { site, travelFeeFrom } from "@/config/site";
 import { Hero } from "@/components/hero";
-import { PricingTerms, ServiceCards } from "@/components/services";
-import { ArrangementComparison } from "@/components/on-site-info";
+import { ServiceCards } from "@/components/services";
+import { ArrangementTiles } from "@/components/on-site-info";
 import { Gallery } from "@/components/gallery";
-import { FaqList, HowItWorks, WhyUs } from "@/components/blocks";
-import { SocialLinks } from "@/components/social-links";
-import { ContactDetails, ResponseTimeCard } from "@/components/contact-details";
-import { OpeningHours } from "@/components/hours";
-import { PaymentInfo } from "@/components/payment-info";
-import { BookingForm } from "@/components/booking-form";
-import { ReviewList } from "@/components/reviews";
+import { CtaBand, ExtraWorkLine, FaqList, HowItWorks, TrustBar } from "@/components/blocks";
+import { GoogleReviewLinks, RatingSummary, ReviewList } from "@/components/reviews";
 import { formatSEK } from "@/lib/format";
-import { ArrowIcon, Eyebrow, Section, SectionHeading } from "@/components/ui";
+import { ArrowIcon, Section, SectionHeading } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: { absolute: `${site.name} – Bilvård & mobil biltvätt i ${site.baseTown}` },
@@ -33,60 +28,38 @@ export default function HomePage() {
   return (
     <>
       <Hero />
+      <TrustBar />
 
       <Section id="tjanster" labelledBy="tjanster-rubrik">
         <SectionHeading
           id="tjanster-rubrik"
           eyebrow="Tjänster & priser"
           title="Tre tjänster. Tydliga priser."
-          intro={`Priset gäller själva tjänsten. Vid mobil bilvård tillkommer reseavgift från ${formatSEK(travelFeeFrom("visit"))} och vid hämtning och lämning från ${formatSEK(travelFeeFrom("pickup"))}. Lämnar du bilen hos oss är det gratis. Du ser avgiften innan du skickar din förfrågan.`}
+          intro={`Priserna gäller personbil – SUV och skåpbil kostar lite mer. Vid mobil bilvård tillkommer reseavgift från ${formatSEK(travelFeeFrom("visit"))} och vid hämtning och lämning från ${formatSEK(travelFeeFrom("pickup"))}. Lämnar du bilen hos oss är det gratis.`}
         />
         <div className="mt-12">
           <ServiceCards />
         </div>
-        <div className="mt-5">
-          <PricingTerms />
-        </div>
-        <div className="mt-8">
-          <MoreLink href="/tjanster#totalpris">Se totalpris med reseavgift</MoreLink>
-        </div>
-      </Section>
-
-      <Section id="hos-dig-eller-hos-oss" labelledBy="upplagg-rubrik" className="border-t border-white/10 bg-ink-900">
-        <SectionHeading
-          id="upplagg-rubrik"
-          eyebrow="Hos dig eller hos oss"
-          title="Hos dig eller hos oss?"
-          intro={`Vi utgår från ${site.baseTown}. Välj om vi ska tvätta bilen där den står, hämta den och göra jobbet hos oss – eller om du lämnar bilen hos oss.`}
-        />
-        <div className="mt-12">
-          <ArrangementComparison />
-        </div>
-      </Section>
-
-      <Section id="galleri" labelledBy="galleri-rubrik">
-        <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
-          <SectionHeading
-            id="galleri-rubrik"
-            eyebrow="Före & efter"
-            title="Se skillnaden."
-            intro="Dra i reglaget för att jämföra före och efter. Fler före- och efterbilder finns på våra sociala medier."
-          />
-          <MoreLink href="/galleri">Hela galleriet</MoreLink>
-        </div>
-        <div className="mt-12">
-          <Gallery preview showFilters={false} />
+        <ExtraWorkLine className="mt-6 max-w-3xl" />
+        <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3">
+          <MoreLink href="/tjanster#fordonstyp">Pris för SUV och skåpbil</MoreLink>
+          <MoreLink href="/tjanster#totalpris">Totalpris med reseavgift</MoreLink>
         </div>
       </Section>
 
       <Section id="recensioner" labelledBy="recensioner-rubrik" className="border-t border-white/10 bg-ink-900">
         <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
-          <SectionHeading
-            id="recensioner-rubrik"
-            eyebrow="Recensioner"
-            title="Vad säger kunderna?"
-            intro="Omdömen från kunder som har anlitat oss."
-          />
+          <div>
+            <SectionHeading
+              id="recensioner-rubrik"
+              eyebrow="Recensioner"
+              title="Vad säger kunderna?"
+              intro="Omdömen från kunder som har anlitat oss."
+            />
+            <Suspense fallback={null}>
+              <RatingSummary className="mt-5" />
+            </Suspense>
+          </div>
           <div className="flex shrink-0 flex-wrap gap-x-6 gap-y-3">
             <MoreLink href="/recensioner">Alla recensioner</MoreLink>
             <MoreLink href="/recensioner#skriv">Lämna en recension</MoreLink>
@@ -97,21 +70,40 @@ export default function HomePage() {
             <ReviewList limit={3} />
           </Suspense>
         </div>
+        <GoogleReviewLinks className="mt-6" />
       </Section>
 
-      <Section id="varfor" labelledBy="varfor-rubrik">
-        <SectionHeading
-          id="varfor-rubrik"
-          eyebrow="Varför EA Auto Detail"
-          title="Enkel bilvård, tydliga villkor."
-          intro={`Vi är två unga entreprenörer som driver ett litet bilvårdsföretag i ${site.baseTown}.`}
-        />
+      <Section id="galleri" labelledBy="galleri-rubrik">
+        <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+          <SectionHeading
+            id="galleri-rubrik"
+            eyebrow="Före & efter"
+            title="Se skillnaden."
+            intro="Dra i reglaget för att jämföra före och efter."
+          />
+          <MoreLink href="/galleri">Hela galleriet</MoreLink>
+        </div>
         <div className="mt-12">
-          <WhyUs />
+          <Gallery preview showFilters={false} />
         </div>
       </Section>
 
-      <Section id="sa-funkar-det" labelledBy="steg-rubrik" className="border-t border-white/10 bg-ink-900">
+      <Section id="hos-dig-eller-hos-oss" labelledBy="upplagg-rubrik" className="border-t border-white/10 bg-ink-900">
+        <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+          <SectionHeading
+            id="upplagg-rubrik"
+            eyebrow="Hos dig eller hos oss"
+            title="Du väljer var."
+            intro={`Vi utgår från ${site.baseTown} och åker upp till ca ${site.travelMaxKm} km.`}
+          />
+          <MoreLink href="/tjanster#hos-dig-eller-hos-oss">Vad som gäller</MoreLink>
+        </div>
+        <div className="mt-10">
+          <ArrangementTiles />
+        </div>
+      </Section>
+
+      <Section id="sa-funkar-det" labelledBy="steg-rubrik">
         <SectionHeading
           id="steg-rubrik"
           eyebrow="Så bokar du"
@@ -120,26 +112,6 @@ export default function HomePage() {
         />
         <div className="mt-12">
           <HowItWorks />
-        </div>
-        <div className="mt-5 grid gap-5 md:grid-cols-3">
-          <OpeningHours className="reveal" />
-          <PaymentInfo className="reveal" />
-          <ResponseTimeCard className="reveal" />
-        </div>
-      </Section>
-
-      <Section id="foljoss" labelledBy="social-rubrik">
-        <div className="reveal grid gap-8 rounded-3xl border border-white/10 bg-ink-850 p-7 sm:p-12 md:grid-cols-[1.3fr_1fr] md:items-center">
-          <div>
-            <Eyebrow className="mb-4">Följ oss</Eyebrow>
-            <h2 id="social-rubrik" className="font-display text-3xl font-bold leading-tight text-white sm:text-4xl">
-              Se fler resultat på TikTok, Instagram och Facebook.
-            </h2>
-            <p className="mt-4 text-mist-300">
-              Där lägger vi upp före- och efterbilder från våra jobb. Du kan också skicka ett meddelande till oss där.
-            </p>
-          </div>
-          <SocialLinks />
         </div>
       </Section>
 
@@ -151,24 +123,11 @@ export default function HomePage() {
               <MoreLink href="/vanliga-fragor">Alla frågor</MoreLink>
             </div>
           </div>
-          <FaqList limit={5} />
+          <FaqList limit={4} />
         </div>
       </Section>
 
-      <Section id="boka" labelledBy="boka-rubrik">
-        <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
-          <SectionHeading
-            id="boka-rubrik"
-            eyebrow="Kontakt & bokning"
-            title="Skicka en förfrågan."
-            intro="Fyll i formuläret så bekräftar vi tid och pris. Du kan också ringa, sms:a eller skriva till oss i sociala medier."
-          />
-          <ContactDetails />
-        </div>
-        <div className="mt-14">
-          <BookingForm headingLevel="h3" />
-        </div>
-      </Section>
+      <CtaBand location="home_cta" />
     </>
   );
 }

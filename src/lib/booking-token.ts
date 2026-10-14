@@ -46,6 +46,8 @@ export type BookingTokenData = {
   phone: string;
   /** Registreringsnummer eller bilmodell. */
   vehicle: string;
+  /** Fordonstyp ("car", "suv", "van"). Tom i länkar skapade innan fordonstyp fanns. */
+  vehicleSize: string;
   service: string;
   arrangement: string;
   location: string;
@@ -88,6 +90,8 @@ type Packed = {
   e: string;
   p: string;
   c: string;
+  /** Fordonstyp – saknas i äldre länkar. */
+  k?: string;
   s: string;
   a: string;
   l: string;
@@ -107,6 +111,7 @@ function pack(d: BookingTokenData): Packed {
     e: d.email,
     p: d.phone,
     c: d.vehicle,
+    k: d.vehicleSize,
     s: d.service,
     a: d.arrangement,
     l: d.location,
@@ -135,12 +140,14 @@ function unpack(raw: unknown): BookingTokenData | null {
   if (!isAmount(p.b) || !(p.f === null || isAmount(p.f))) return null;
   if (typeof p.i !== "number" || !Number.isFinite(p.i)) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(p.d as string)) return null;
+  if (p.k !== undefined && (typeof p.k !== "string" || p.k.length > 20)) return null;
   return {
     reference: p.r as string,
     name: p.n as string,
     email: p.e as string,
     phone: p.p as string,
     vehicle: p.c as string,
+    vehicleSize: (p.k as string | undefined) ?? "",
     service: p.s as string,
     arrangement: p.a as string,
     location: p.l as string,

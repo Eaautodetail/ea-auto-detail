@@ -4,6 +4,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { site } from "@/config/site";
 import { LocalBusinessJsonLd } from "@/components/local-business-jsonld";
+import { MobileActionBar } from "@/components/mobile-action-bar";
 import "./globals.css";
 
 const inter = Inter({
@@ -77,6 +78,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <Footer />
+        <MobileActionBar />
         <LocalBusinessJsonLd />
       </body>
     </html>

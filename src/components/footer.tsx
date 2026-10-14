@@ -107,6 +107,20 @@ export function Footer() {
           </ul>
         </nav>
       </Container>
+      <Container className="border-t border-white/10 py-8">
+        <nav aria-label="Orter vi åker till">
+          <FooterHeading>Här åker vi</FooterHeading>
+          <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            {site.towns.map((t) => (
+              <li key={t.slug}>
+                <Link href={`/bilvard/${t.slug}`} className={linkClass}>
+                  Bilvård {t.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </Container>
       <Container className="flex flex-col gap-2 border-t border-white/10 py-6 text-xs text-mist-400 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <p>
           © <CopyrightYear /> {site.name}

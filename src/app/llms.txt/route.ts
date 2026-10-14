@@ -32,8 +32,10 @@ export function GET() {
     "",
     "## Tjänster och priser (SEK)",
     ...site.services.map(
-      (s) => `- ${s.name}: ${formatSEK(s.price)}${s.duration ? ` (uppskattad tid: ${s.duration})` : ""}. Ingår: ${s.includes.join("; ")}.`,
+      (s) =>
+        `- ${s.name}: ${site.vehicleSizes.map((v) => `${v.label.toLowerCase()} ${formatSEK(v.prices[s.id])}`).join(", ")}${s.duration ? ` (uppskattad tid: ${s.duration})` : ""}. Ingår: ${s.includes.join("; ")}.`,
     ),
+    `- Fordonstyper: ${site.vehicleSizes.map((v) => `${v.label} (${v.description.replace(/\.$/, "").toLowerCase()})`).join("; ")}. ${site.vehicleSizeNote}`,
     `- ${site.durationNote}`,
     `- ${site.extraWorkNote}`,
     "- Vi erbjuder inte maskinpolering, lackkorrigering eller andra avancerade behandlingar. Endast tjänsterna ovan kan bokas.",

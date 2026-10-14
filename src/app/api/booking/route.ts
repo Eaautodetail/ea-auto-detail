@@ -91,6 +91,7 @@ async function notifyWebhook(fields: BookingFields, text: string, reference: str
     fields.service,
     fields.arrangement,
     fields.travelZone,
+    fields.vehicleSize,
   );
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (process.env.BOOKING_WEBHOOK_SECRET) headers["X-Webhook-Secret"] = process.env.BOOKING_WEBHOOK_SECRET;
@@ -106,6 +107,7 @@ async function notifyWebhook(fields: BookingFields, text: string, reference: str
       receivedAt: new Date().toISOString(),
       customer: { name: fields.name, phone: fields.phone, email: fields.email },
       vehicle: fields.vehicle,
+      vehicleSize: fields.vehicleSize,
       service: { id: service?.id ?? fields.service, name: service?.name ?? null, price: base },
       arrangement: { id: arrangement?.id ?? fields.arrangement, label: arrangement?.label ?? null },
       address: fields.location || null,
@@ -206,13 +208,19 @@ export async function POST(request: Request) {
         : "sending";
 
   // Krypterad länk så att företaget kan bekräfta tiden från /hantera (ingen databas behövs).
-  const { base, fee, feeKnown } = priceSummary(fields.service, fields.arrangement, fields.travelZone);
+  const { base, fee, feeKnown } = priceSummary(
+    fields.service,
+    fields.arrangement,
+    fields.travelZone,
+    fields.vehicleSize,
+  );
   const token = sealBookingToken({
     reference,
     name: fields.name,
     email: fields.email,
     phone: fields.phone,
     vehicle: fields.vehicle,
+    vehicleSize: fields.vehicleSize,
     service: fields.service,
     arrangement: fields.arrangement,
     location: fields.location,

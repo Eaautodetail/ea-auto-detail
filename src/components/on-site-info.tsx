@@ -3,7 +3,7 @@
  * Allt läses från `site.arrangements`, `site.services[].onSite` och
  * `site.onSite` i src/config/site.ts.
  */
-import { getArrangement, pricedZones, site, type FeeArrangement, type Service } from "@/config/site";
+import { getArrangement, pricedZones, site, travelFeeFromText, type FeeArrangement, type Service } from "@/config/site";
 import { formatSEK } from "@/lib/format";
 import { CheckIcon, Icon, IconBadge, type IconName } from "@/components/ui";
 
@@ -178,5 +178,24 @@ export function BelongingsNote({ className = "" }: { className?: string }) {
         <p className="mt-1 text-sm leading-relaxed text-mist-200 sm:text-base">{site.onSite.belongings.text}</p>
       </div>
     </div>
+  );
+}
+
+/** Kompakt version av "Hos dig eller hos oss?" för startsidan. */
+export function ArrangementTiles() {
+  const icons: Record<string, IconName> = { visit: "pin", pickup: "swap", dropoff: "parking" };
+  return (
+    <ul className="grid gap-3 md:grid-cols-3">
+      {site.arrangements.map((a) => (
+        <li key={a.id} className="reveal flex items-start gap-4 rounded-2xl border border-white/10 bg-ink-850 p-5">
+          <IconBadge name={icons[a.id] ?? "pin"} />
+          <div className="min-w-0">
+            <h3 className="font-display text-lg font-bold text-white">{a.label}</h3>
+            <p className="mt-1 text-sm leading-relaxed text-mist-300">{a.description}</p>
+            <p className="mt-2 text-sm font-semibold text-white">{travelFeeFromText(a.id)}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

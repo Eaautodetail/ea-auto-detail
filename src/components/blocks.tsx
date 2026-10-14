@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { site, travelFeeFrom } from "@/config/site";
+import { currentHours, site, travelFeeFrom } from "@/config/site";
 import { formatSEK } from "@/lib/format";
 import { BookingButton } from "@/components/booking-button";
 import { ResponseTimeNote } from "@/components/contact-details";
 import { paymentMethodsText } from "@/components/payment-info";
-import { Container, Eyebrow, Placeholder } from "@/components/ui";
+import { CheckIcon, Container, Eyebrow, Icon, Placeholder, type IconName } from "@/components/ui";
 
 /** Sidhuvud för undersidor (under den fasta menyn). */
 export function PageHero({
@@ -173,5 +173,51 @@ export function CtaBand({ title = "Dags att få bilen ren?", location }: { title
         </div>
       </Container>
     </section>
+  );
+}
+
+/**
+ * Kort förtroenderad direkt under hero. Bara sådant som redan står i site.ts –
+ * inga påhittade löften.
+ */
+export function TrustBar() {
+  const hours = currentHours();
+  const items: { icon: IconName; title: string; text: string }[] = [
+    { icon: "wallet", title: "Betala när det är klart", text: `${paymentMethodsText()} på plats` },
+    { icon: "info", title: "Du ser priset innan", text: "Inga dolda avgifter" },
+    { icon: "reply", title: "Svar inom 24 timmar", text: "Ofta direkt" },
+    { icon: "calendar", title: site.hours.days, text: hours.text },
+  ];
+  return (
+    <section aria-label="Bra att veta" className="border-y border-white/10 bg-ink-900">
+      <Container>
+        <ul className="grid grid-cols-2 gap-x-4 gap-y-5 py-6 sm:py-7 lg:grid-cols-4">
+          {items.map((item) => (
+            <li key={item.title} className="flex items-start gap-3">
+              <span
+                aria-hidden="true"
+                className="grid size-9 shrink-0 place-items-center rounded-full border border-white/15 bg-white/5 text-white"
+              >
+                <Icon name={item.icon} className="size-[1.1rem]" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold leading-snug text-white">{item.title}</span>
+                <span className="block text-xs leading-snug text-mist-400 sm:text-sm">{item.text}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Container>
+    </section>
+  );
+}
+
+/** "Inget extra utan ditt ja" – kort rad under tjänstekorten på startsidan. */
+export function ExtraWorkLine({ className = "" }: { className?: string }) {
+  return (
+    <p className={`flex items-start gap-2 text-sm text-mist-300 ${className}`}>
+      <CheckIcon className="mt-0.5 size-4 shrink-0 text-white" />
+      <span>{site.extraWorkNote}</span>
+    </p>
   );
 }

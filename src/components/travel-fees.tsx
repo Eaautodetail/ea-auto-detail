@@ -167,7 +167,8 @@ export function PriceTable({ id, className = "" }: { id?: string; className?: st
         </table>
       </div>
       <p className="mt-3 text-sm text-mist-400">
-        Totalpris = tjänst + reseavgift. Avståndet räknas från {site.baseTown}. Gäller utan eventuellt extraarbete.
+        Totalpris = tjänst + reseavgift. Priserna gäller personbil – för SUV och skåpbil gäller priserna i tabellen
+        ”Pris per fordonstyp”. Avståndet räknas från {site.baseTown}. Gäller utan eventuellt extraarbete.
       </p>
     </div>
   );

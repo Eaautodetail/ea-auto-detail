@@ -53,6 +53,15 @@ function ServiceCard({ service, headingLevel: H }: { service: Service; headingLe
         </span>
         <span className="text-lg font-semibold text-mist-300">kr</span>
       </p>
+      <p className="mt-1 text-sm font-medium text-mist-200">
+        {site.vehicleSizes[0].label}
+        {site.vehicleSizes.slice(1).map((v) => (
+          <span key={v.id} className="text-mist-400">
+            {" · "}
+            {v.label} <span className="whitespace-nowrap font-semibold text-mist-200">{formatSEK(v.prices[service.id])}</span>
+          </span>
+        ))}
+      </p>
       {saving > 0 && (
         <p className="mt-1 text-sm text-mist-300">{formatSEK(saving)} billigare än att boka delarna var för sig</p>
       )}
@@ -141,4 +150,58 @@ export function PricingTerms({ titleAs = "h3", showPayment = true }: { titleAs?:
       <ServiceNotes titleAs={titleAs} showPayment={showPayment} />
     </div>
   );
+}
+
+/** Pris per tjänst och fordonstyp (personbil, SUV, skåpbil). */
+export function VehiclePriceTable({ className = "" }: { className?: string }) {
+  return (
+    <div className={className}>
+      <div className="overflow-x-auto rounded-2xl border border-white/10">
+        <table className="w-full min-w-[18.5rem] text-left text-sm">
+          <caption className="sr-only">Pris per tjänst och fordonstyp, utan reseavgift</caption>
+          <thead className="bg-ink-800 text-xs uppercase tracking-wider text-mist-400">
+            <tr>
+              <th scope="col" className="px-4 py-3.5 font-semibold sm:px-5">
+                Tjänst
+              </th>
+              {site.vehicleSizes.map((v) => (
+                <th key={v.id} scope="col" className="px-3 py-3.5 text-right font-semibold text-mist-200 sm:px-5">
+                  {v.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/10 bg-ink-850">
+            {site.services.map((s) => (
+              <tr key={s.id}>
+                <th scope="row" className="px-4 py-3.5 font-semibold text-white sm:px-5">
+                  {s.name}
+                </th>
+                {site.vehicleSizes.map((v) => (
+                  <td
+                    key={v.id}
+                    className="font-display whitespace-nowrap px-3 py-3.5 text-right text-base font-bold text-white sm:px-5 sm:text-lg"
+                  >
+                    {formatSEK(v.prices[s.id])}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ul className="mt-3 space-y-1 text-sm text-mist-400">
+        {site.vehicleSizes.map((v) => (
+          <li key={v.id}>
+            <span className="font-semibold text-mist-200">{v.label}:</span> {lowerFirstText(v.description)}
+          </li>
+        ))}
+        <li>{site.vehicleSizeNote}</li>
+      </ul>
+    </div>
+  );
+}
+
+function lowerFirstText(text: string) {
+  return text.charAt(0).toLowerCase() + text.slice(1);
 }

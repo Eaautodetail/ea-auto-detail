@@ -8,7 +8,9 @@ import {
   getService,
   latestStartTime,
   onSiteNeeds,
+  servicePrice,
   site,
+  vehicleSurcharge,
   travelFee,
   travelFeeFromText,
   type Service,
@@ -77,6 +79,7 @@ const FLEXIBLE_TIME = "Flexibel";
 /** Fält som ska valideras om när ett annat fält ändras. */
 const dependentFields: Partial<Record<BookingField, BookingField[]>> = {
   service: ["time"],
+  vehicleSize: ["time"],
   arrangement: ["location", "travelZone"],
 };
 
@@ -94,6 +97,15 @@ function focusAndReveal(el: HTMLElement | null) {
 
 function timeLabel(time: string) {
   return time === FLEXIBLE_TIME ? "Flexibel – ni föreslår en tid" : `kl. ${time}`;
+}
+
+/** Priset på fordonskortet: priset för vald tjänst, annars tillägget jämfört med personbil. */
+function vehicleSizeMeta(sizeId: string, serviceId: string) {
+  if (getService(serviceId)) return formatSEK(servicePrice(serviceId, sizeId));
+  const extras = site.services.map((s) => vehicleSurcharge(s.id, sizeId));
+  const [min, max] = [Math.min(...extras), Math.max(...extras)];
+  if (max === 0) return "Grundpris";
+  return min === max ? `+${formatSEK(min)}` : `+${min}–${formatSEK(max)}`;
 }
 
 /** Vad en tjänst kräver på plats, t.ex. "vatten och el". */
@@ -169,7 +181,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
     }
   }, [status]);
 
-  const price = priceSummary(values.service, values.arrangement, values.travelZone);
+  const price = priceSummary(values.service, values.arrangement, values.travelZone, values.vehicleSize);
   const selectedService = price.service;
   const hours = currentHours();
   const fieldId = (f: string) => `${formId}-${f}`;
@@ -181,7 +193,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
     // Byts tjänsten till en som inte hinns med på vald starttid nollställs tiden,
     // med en förklaring under tidsfältet.
     let timeNotice: string | undefined;
-    if (field === "service" && next.time && !bookingTimes(value).includes(next.time)) {
+    if ((field === "service" || field === "vehicleSize") && next.time && !bookingTimes(next.service, next.vehicleSize).includes(next.time)) {
       timeNotice = validateField("time", next, day());
       next.time = "";
     }
@@ -345,8 +357,9 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
   const errorList = fieldOrder.filter((f) => errors[f]).map((f) => ({ field: f as string, message: errors[f]! }));
   if (errors.photos) errorList.push({ field: "photos", message: errors.photos });
 
-  const timeOptions = bookingTimes(values.service).map((t) => ({ value: t, label: timeLabel(t) }));
-  const latestStart = selectedService ? latestStartTime(selectedService.id) : null;
+  const timeOptions = bookingTimes(values.service, values.vehicleSize).map((t) => ({ value: t, label: timeLabel(t) }));
+  const latestStart = selectedService ? latestStartTime(selectedService.id, values.vehicleSize) : null;
+  const biggerVehicle = !!price.vehicleSize && price.vehicleSize.extraMinutes > 0;
   const whenHintId = `${formId}-when-hint`;
   const isPickup = values.arrangement === "pickup";
 
@@ -412,7 +425,7 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
                     </span>
                   ) : undefined
                 }
-                meta={formatSEK(s.price)}
+                meta={values.vehicleSize ? formatSEK(servicePrice(s.id, values.vehicleSize)) : `från ${formatSEK(s.price)}`}
                 invalid={!!showError("service")}
                 required
               />
@@ -449,9 +462,52 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
           )}
         </fieldset>
 
-        {/* 2. Upplägg, adress och reseavgift */}
+        {/* 2. Fordon */}
+        <fieldset
+          aria-describedby={showError("vehicleSize") ? `${fieldId("vehicleSize")}-err` : `${fieldId("vehicleSize")}-hint`}
+        >
+          <Legend step={2}>Vilket fordon gäller det? *</Legend>
+          <div className="grid scroll-mt-32 gap-3 sm:grid-cols-3" id={fieldId("vehicleSize")} tabIndex={-1}>
+            {site.vehicleSizes.map((v) => (
+              <OptionCard
+                key={v.id}
+                name="vehicleSize"
+                value={v.id}
+                checked={values.vehicleSize === v.id}
+                onChange={() => update("vehicleSize", v.id)}
+                title={v.label}
+                description={v.description}
+                meta={vehicleSizeMeta(v.id, values.service)}
+                invalid={!!showError("vehicleSize")}
+                required
+              />
+            ))}
+          </div>
+          <FieldError id={`${fieldId("vehicleSize")}-err`} message={showError("vehicleSize")} />
+          <p id={`${fieldId("vehicleSize")}-hint`} className="mt-3 text-sm text-mist-400">
+            {site.vehicleSizeNote}
+          </p>
+          <div className="mt-6">
+            <TextField
+              id={fieldId("vehicle")}
+              name="vehicle"
+              label="Registreringsnummer eller bilmodell *"
+              placeholder="T.ex. ABC 123 eller Volvo V60"
+              value={values.vehicle}
+              onChange={(v) => update("vehicle", v)}
+              onBlur={() => blur("vehicle")}
+              error={showError("vehicle")}
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={100}
+              required
+            />
+          </div>
+        </fieldset>
+
+        {/* 3. Upplägg, adress och reseavgift */}
         <fieldset aria-describedby={showError("arrangement") ? `${fieldId("arrangement")}-err` : undefined}>
-          <Legend step={2}>Var ska vi ta hand om bilen? *</Legend>
+          <Legend step={3}>Var ska vi ta hand om bilen? *</Legend>
           <div className="grid scroll-mt-32 gap-3 sm:grid-cols-3" id={fieldId("arrangement")} tabIndex={-1}>
             {site.arrangements.map((a) => (
               <OptionCard
@@ -543,9 +599,9 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
           )}
         </fieldset>
 
-        {/* 3. När */}
+        {/* 4. När */}
         <fieldset>
-          <Legend step={3}>När passar det? *</Legend>
+          <Legend step={4}>När passar det? *</Legend>
           <div id={whenHintId} className="mb-5 space-y-1 text-sm text-mist-400">
             <p className="flex items-start gap-2 text-mist-200">
               <ClockIcon className="mt-0.5 size-4 shrink-0" />
@@ -557,7 +613,8 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
             {selectedService && latestStart && (
               <p>
                 {capitalize(selectedService.name.toLowerCase())} tar{" "}
-                {selectedService.duration ? `ungefär ${selectedService.duration.replace(/^cirka /, "")}` : "en stund"}, så
+                {selectedService.duration ? `ungefär ${selectedService.duration.replace(/^cirka /, "")}` : "en stund"}
+                {biggerVehicle ? ` för en personbil och lite längre för en ${price.vehicleSize!.label.toLowerCase()}` : ""}, så
                 senaste starttid är kl. {latestStart} för att vi ska hinna klart före {hours.close}.
               </p>
             )}
@@ -592,25 +649,6 @@ export function BookingForm({ headingLevel = "h2" }: { headingLevel?: "h2" | "h3
               required
             />
           </div>
-        </fieldset>
-
-        {/* 4. Bilen */}
-        <fieldset>
-          <Legend step={4}>Bilen</Legend>
-          <TextField
-            id={fieldId("vehicle")}
-            name="vehicle"
-            label="Registreringsnummer eller bilmodell *"
-            placeholder="T.ex. ABC 123 eller Volvo V60"
-            value={values.vehicle}
-            onChange={(v) => update("vehicle", v)}
-            onBlur={() => blur("vehicle")}
-            error={showError("vehicle")}
-            autoComplete="off"
-            spellCheck={false}
-            maxLength={100}
-            required
-          />
         </fieldset>
 
         {/* 5. Kontaktuppgifter */}
@@ -965,6 +1003,7 @@ function SuccessPanel({
           label="Tjänst"
           value={price.service ? `${price.service.name} – ${formatSEK(price.base)}` : "–"}
         />
+        <SummaryRow label="Fordon" value={[price.vehicleSize?.label, values.vehicle].filter(Boolean).join(" · ") || "–"} />
         <SummaryRow label="Önskad dag och tid" value={when || "–"} />
         <SummaryRow label="Upplägg" value={price.arrangement?.label ?? "–"} />
         {values.location && locationRequired(values.arrangement) && <SummaryRow label="Adress" value={values.location} />}

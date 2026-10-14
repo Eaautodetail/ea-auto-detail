@@ -87,3 +87,48 @@ export async function ReviewFormOrNotice({ children }: { children: React.ReactNo
     </div>
   );
 }
+
+/** Minsta antal recensioner innan snittbetyget visas. */
+const MIN_REVIEWS_FOR_AVERAGE = 3;
+
+/**
+ * Snittbetyg räknat från de riktiga recensionerna, t.ex. "4,8 av 5 · 12
+ * recensioner". Visas först när det finns minst tre – annars inget alls.
+ */
+export async function RatingSummary({ className = "" }: { className?: string }) {
+  const { reviews } = await getPublicReviews();
+  if (reviews.length < MIN_REVIEWS_FOR_AVERAGE) return null;
+  const average = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+  const rounded = Math.round(average * 10) / 10;
+  return (
+    <p className={`inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-full border border-white/15 bg-white/5 px-4 py-2 ${className}`}>
+      <Stars rating={Math.round(average)} />
+      <span className="text-sm text-mist-200">
+        <strong className="font-display text-base font-extrabold text-white">
+          {rounded.toLocaleString("sv-SE", { minimumFractionDigits: 1 })}
+        </strong>{" "}
+        av 5 · {reviews.length} recensioner
+      </span>
+    </p>
+  );
+}
+
+/** Länkar till Google-företagsprofilen när de finns i site.ts (annars inget). */
+export function GoogleReviewLinks({ className = "" }: { className?: string }) {
+  const { profile, review } = site.google;
+  if (!profile && !review) return null;
+  return (
+    <p className={`flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-white ${className}`}>
+      {review && (
+        <a href={review} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-mist-200">
+          Lämna ett omdöme på Google
+        </a>
+      )}
+      {profile && (
+        <a href={profile} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-mist-200">
+          Se oss på Google
+        </a>
+      )}
+    </p>
+  );
+}

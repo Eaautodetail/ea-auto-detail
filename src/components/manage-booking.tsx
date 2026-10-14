@@ -166,7 +166,12 @@ function bookingFee(booking: ManagedBooking): number | null {
 }
 
 function BookingDetails({ booking, expiresAt }: { booking: ManagedBooking; expiresAt: string }) {
-  const { service, arrangement, zone } = priceSummary(booking.service, booking.arrangement, booking.travelZone);
+  const { service, arrangement, zone, vehicleSize } = priceSummary(
+    booking.service,
+    booking.arrangement,
+    booking.travelZone,
+    booking.vehicleSize,
+  );
   const fee = bookingFee(booking);
   const quotedTotal = booking.quotedBase + (fee ?? 0);
   const feeUnknown = fee == null;
@@ -199,7 +204,10 @@ function BookingDetails({ booking, expiresAt }: { booking: ManagedBooking; expir
             {booking.email}
           </a>
         </Detail>
-        <Detail label="Bil">{booking.vehicle}</Detail>
+        <Detail label="Bil">
+          {booking.vehicle}
+          {vehicleSize ? ` · ${vehicleSize.label}` : ""}
+        </Detail>
         <Detail label="Tjänst">
           {service?.name ?? booking.service} – {formatSEK(booking.quotedBase)}
         </Detail>

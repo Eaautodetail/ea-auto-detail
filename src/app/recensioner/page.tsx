@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { site } from "@/config/site";
 import { PageHero, CtaBand } from "@/components/blocks";
 import { ReviewForm } from "@/components/review-form";
-import { ReviewFormOrNotice, ReviewList } from "@/components/reviews";
+import { GoogleReviewLinks, RatingSummary, ReviewFormOrNotice, ReviewList } from "@/components/reviews";
 import { Section, SectionHeading } from "@/components/ui";
 
 export const metadata: Metadata = {
@@ -23,6 +23,10 @@ export default function ReviewsPage() {
         <a href="#skriv" className="inline-flex items-center gap-2 text-sm font-semibold text-white underline underline-offset-4">
           Skriv en recension
         </a>
+        <Suspense fallback={null}>
+          <RatingSummary className="mt-5" />
+        </Suspense>
+        <GoogleReviewLinks className="mt-4" />
       </PageHero>
 
       <Section labelledBy="recensioner-lista">

@@ -316,7 +316,12 @@ export function receiptFailedNotice(reference: string): RenderedEmail {
 /* ------------------------------------------ kvitto till kunden */
 
 export function customerReceiptEmail(v: BookingFields, reference: string): RenderedEmail {
-  const { service, arrangement, zone, base, fee, feeKnown, total } = priceSummary(v.service, v.arrangement, v.travelZone);
+  const { service, arrangement, zone, vehicleSize, base, fee, feeKnown, total } = priceSummary(
+    v.service,
+    v.arrangement,
+    v.travelZone,
+    v.vehicleSize,
+  );
   const subject = `Vi har tagit emot din bokningsförfrågan (${reference})`;
 
   const travelFee =
@@ -335,7 +340,7 @@ export function customerReceiptEmail(v: BookingFields, reference: string): Rende
   rows.push(
     ["Reseavgift", travelFee],
     ["Önskad dag", `${capitalize(formatDate(v.date))}, ${timeText(v.time)}`],
-    ["Bil", cleanText(v.vehicle)],
+    ["Bil", [cleanText(v.vehicle), vehicleSize?.label].filter(Boolean).join(" · ")],
   );
   if (service?.duration) rows.push(["Ungefärlig tidsåtgång", `${service.duration} (uppskattning)`]);
   rows.push(["Preliminärt pris", feeKnown ? formatSEK(total) : `${formatSEK(total)} + reseavgift (bekräftas)`]);
@@ -383,7 +388,7 @@ export function confirmationHeadline(date: string, time: string) {
 }
 
 export function customerConfirmationEmail(b: BookingTokenData, c: ConfirmedDetails): RenderedEmail {
-  const { service, arrangement } = priceSummary(b.service, b.arrangement, b.travelZone);
+  const { service, arrangement, vehicleSize } = priceSummary(b.service, b.arrangement, b.travelZone, b.vehicleSize);
   const when = confirmationHeadline(c.date, c.time);
   const subject = `Din tid är bekräftad: ${formatDate(c.date)} kl. ${c.time} (${b.reference})`;
 
@@ -393,7 +398,7 @@ export function customerConfirmationEmail(b: BookingTokenData, c: ConfirmedDetai
     ["Upplägg", arrangement?.label ?? b.arrangement],
   ];
   if (b.location && arrangement?.feeApplies !== false) rows.push(["Adress", cleanText(b.location)]);
-  rows.push(["Bil", cleanText(b.vehicle)]);
+  rows.push(["Bil", [cleanText(b.vehicle), vehicleSize?.label].filter(Boolean).join(" · ")]);
   if (service?.duration) rows.push(["Ungefärlig tidsåtgång", `${service.duration} (uppskattning)`]);
   rows.push(["Pris", `${formatSEK(c.price)}${arrangement?.feeApplies ? " inkl. reseavgift" : ""}`]);
 

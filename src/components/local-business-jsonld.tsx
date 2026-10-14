@@ -28,7 +28,7 @@ export function LocalBusinessJsonLd() {
   if (!isRealSiteUrl(site.url) || !phone) return null;
 
   const hours = currentHours();
-  const prices = site.services.map((s) => s.price);
+  const prices = site.vehicleSizes.flatMap((v) => Object.values(v.prices));
 
   const data = {
     "@context": "https://schema.org",
@@ -38,7 +38,7 @@ export function LocalBusinessJsonLd() {
     url: site.url,
     telephone: phoneHref ?? phone,
     ...(email ? { email } : {}),
-    areaServed: { "@type": "City", name: site.baseTown },
+    areaServed: site.towns.map((t) => ({ "@type": "City", name: t.name })),
     openingHoursSpecification: [
       {
         "@type": "OpeningHoursSpecification",

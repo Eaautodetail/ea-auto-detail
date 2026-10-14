@@ -43,7 +43,12 @@ export function PriceSummary({ price, title = "Din förfrågan" }: { price: Pric
 
       <dl className="mt-4 space-y-3 text-sm" aria-live="polite">
         <div className="flex justify-between gap-4">
-          <dt className="min-w-0 text-mist-300">{service ? service.name : "Ingen tjänst vald"}</dt>
+          <dt className="min-w-0 text-mist-300">
+            {service ? service.name : "Ingen tjänst vald"}
+            <span className="block text-xs text-mist-400">
+              {price.vehicleSize ? price.vehicleSize.label : "Välj fordon – pris för personbil visas"}
+            </span>
+          </dt>
           <dd className="shrink-0 font-semibold text-white">{service ? formatSEK(price.base) : "–"}</dd>
         </div>
         <div className="flex justify-between gap-4">
@@ -133,7 +138,9 @@ export function PriceLine({ price }: { price: Price }) {
         <dd className="font-semibold text-white">
           {service ? (
             <>
-              {service.name} <span className="whitespace-nowrap">· {formatSEK(price.base)}</span>
+              {service.name}
+              {price.vehicleSize ? ` (${price.vehicleSize.label.toLowerCase()})` : ""}{" "}
+              <span className="whitespace-nowrap">· {formatSEK(price.base)}</span>
             </>
           ) : (
             "Ingen tjänst vald"
