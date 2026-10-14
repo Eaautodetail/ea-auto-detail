@@ -13,7 +13,6 @@ När du sparar (gör en *commit*) bygger Vercel om sajten automatiskt. Efter nå
 | Före- och efterbilder (galleriet) | `public/gallery/` | Listan `gallery: [ ... ]` |
 | Stor bild högst upp på startsidan | `public/images/` | Raden `heroImage:` |
 | Logotyp | `public/images/` | Raden `logo:` |
-| Foto på er på sidan Om oss | `public/images/` | En ny rad `aboutImage:` |
 
 ---
 
@@ -38,7 +37,7 @@ När du sparar (gör en *commit*) bygger Vercel om sajten automatiskt. Efter nå
 2. Kontrollera att du står på den gren som sajten publiceras från – oftast **`main`** (knappen uppe till vänster
    ovanför fillistan).
 3. Klicka dig in i mappen **`public`** och sedan **`gallery`** (för galleribilder) eller **`images`** (för
-   hero-bild, logotyp och Om oss-foto).
+   hero-bild och logotyp).
 4. Klicka på **Add file → Upload files**.
 5. Dra in bildfilerna (eller klicka *choose your files*).
 6. Skriv en kort beskrivning under *Commit changes*, t.ex. `Lägg till bilder Volvo V60`.
@@ -150,22 +149,7 @@ till (med din bilds bredd och höjd):
 
 ---
 
-## 6. Foto på er till sidan Om oss
-
-1. Välj ett **stående** foto (ungefär 4:5), t.ex. på er två framför en bil ni har tvättat.
-2. Ladda upp det till `public/images/`, t.ex. som `om-oss.jpg`.
-3. Öppna `src/config/site.ts` → pennan → sök efter `heroImage:`.
-4. Lägg till en **ny rad direkt under** `heroImage`-raden:
-
-```ts
-  aboutImage: { src: "/images/om-oss.jpg", alt: "Grundarna av EA Auto Detail framför en nytvättad bil" },
-```
-
-5. Commit changes. Fotot ersätter då den grå rutan med "EA" på sidan Om oss.
-
----
-
-## 7. Kontrollera att allt fungerar
+## 6. Kontrollera att allt fungerar
 
 - På GitHub syns en **gul prick** bredvid din ändring medan Vercel bygger, en **grön bock** när det är klart och ett
   **rött kryss** om något blev fel.
