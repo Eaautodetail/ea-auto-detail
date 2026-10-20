@@ -165,7 +165,10 @@ export const site = {
   logo: null as null | { src: string; width: number; height: number },
 
   /** Hero-bild. `null` = grafisk bakgrund används tills riktiga bilder finns. */
-  heroImage: null as null | { src: string; alt: string },
+  heroImage: {
+    src: "/images/hero.jpg",
+    alt: "Skumtvätt av en silverfärgad bil i kvällssol",
+  } as null | { src: string; alt: string },
 
   contact: {
     /** Telefonnummer i format för visning. */

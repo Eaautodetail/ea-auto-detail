@@ -26,15 +26,33 @@ export function Hero() {
   return (
     <section
       aria-labelledby="hero-rubrik"
-      className="grain relative isolate flex min-h-[100svh] items-end overflow-hidden pb-14 pt-32 sm:items-center sm:pb-24"
+      className={`grain relative isolate flex min-h-[100svh] items-end overflow-hidden pb-14 sm:pb-24 ${
+        site.heroImage ? "pt-[44svh] lg:items-center lg:pt-32" : "pt-32 sm:items-center"
+      }`}
     >
       <div className="absolute inset-0 -z-10">
         {site.heroImage ? (
-          <Image src={site.heroImage.src} alt={site.heroImage.alt} fill priority sizes="100vw" className="object-cover" />
+          // Stående foto: ett band överst på mobil, till höger på större skärmar så texten står på mörk botten.
+          <div className="absolute inset-x-0 top-0 h-[62svh] lg:inset-y-0 lg:left-[42%] lg:h-auto">
+            <Image
+              src={site.heroImage.src}
+              alt={site.heroImage.alt}
+              fill
+              priority
+              sizes="(min-width: 1024px) 58vw, 100vw"
+              className="object-cover object-[50%_40%] lg:object-[50%_55%]"
+            />
+            <div className="absolute inset-0 bg-ink-950/20" />
+            <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-ink-950/70 to-transparent lg:hidden" />
+            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-ink-950 via-ink-950/70 to-transparent lg:hidden" />
+            <div className="absolute inset-y-0 left-0 hidden w-2/3 bg-gradient-to-r from-ink-950 to-transparent lg:block" />
+          </div>
         ) : (
-          <HeroArt />
+          <>
+            <HeroArt />
+            <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/75 to-ink-950/10" />
+          </>
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/75 to-ink-950/10" />
         <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-ink-950 to-transparent" />
       </div>
 
