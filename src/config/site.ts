@@ -15,7 +15,7 @@
 import { formatSEK } from "@/lib/format";
 
 /** Priser i hela kronor (SEK). Ändra här så uppdateras hela sajten. */
-const PRICE = { exterior: 149, interior: 249, complete: 349 } as const;
+const PRICE = { exterior: 249, interior: 349, complete: 449 } as const;
 
 /**
  * Pris per tjänst och fordonstyp, i hela kronor. Personbil = grundpriset ovan.
@@ -24,8 +24,8 @@ const PRICE = { exterior: 149, interior: 249, complete: 349 } as const;
  */
 const VEHICLE_PRICE = {
   car: PRICE,
-  suv: { exterior: 229, interior: 339, complete: 449 },
-  van: { exterior: 249, interior: 369, complete: 499 },
+  suv: { exterior: 329, interior: 439, complete: 549 },
+  van: { exterior: 349, interior: 469, complete: 599 },
 } as const;
 
 /**

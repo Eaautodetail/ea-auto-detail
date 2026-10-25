@@ -52,7 +52,7 @@ changing them: the site address and the e-mail provider named on `/integritet` a
       words; add your first names, a line on how you started, and a photo of the two of you (`aboutImage`, see BILDER.md).
 - [ ] Logo (`site.logo`) and a hero photo of your own work (`site.heroImage`), see BILDER.md.
 - [ ] Optional: show "Mest prisvärt" and "49 kr billigare än att boka delarna var för sig" on the combined service. It is
-      calculated from the prices (149 + 249 kr compared with 349 kr), not a separate discount. Hidden now; set
+      calculated from the prices (249 + 349 kr compared with 449 kr), not a separate discount. Hidden now; set
       `comboSaving.show: true` in `site.ts` if you want it.
 - [ ] Switch `hours.currentSeason` between `"winter"` and `"summer"` when the season changes. The hours shown and the
       start times in the booking form follow it. The form only offers start times where the job (`maxMinutes` per
